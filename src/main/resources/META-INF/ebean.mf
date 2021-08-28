@@ -1,0 +1,3 @@
+entity-packages: lukelin.his.domain.entity
+transactional-packages: lukelin.his.domain
+querybean-packages: none

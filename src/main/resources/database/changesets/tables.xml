@@ -1,0 +1,785 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+         http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.5.xsd">
+
+    <changeSet id="initial-tables" author="llg">
+        <createTable tableName="b_brunnstrom_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="arms_score_id" type="uuid"/>
+            <column name="legs_score_id" type="uuid"/>
+            <column name="hands_score_id" type="uuid"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_brunnstrom_score">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="body_part_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score_defination" type="varchar(225)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_brunnstrom_body_part">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order" type="integer"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="b_brunnstrom_asses"
+                                 baseColumnNames="arms_score_id"
+                                 constraintName="fk_brunnstrom_arms_score"
+                                 referencedTableName="b_brunnstrom_score"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_brunnstrom_asses"
+                                 baseColumnNames="legs_score_id"
+                                 constraintName="fk_brunnstrom_legs_score"
+                                 referencedTableName="b_brunnstrom_score"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_brunnstrom_asses"
+                                 baseColumnNames="hands_score_id"
+                                 constraintName="fk_brunnstrom_hands_score"
+                                 referencedTableName="b_brunnstrom_score"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_brunnstrom_score"
+                                 baseColumnNames="body_part_id"
+                                 constraintName="fk_brunnstrom_score_body_part"
+                                 referencedTableName="b_brunnstrom_body_part"
+                                 referencedColumnNames="uuid"/>
+
+        <createTable tableName="b_rom_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_rom_asses_detail">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="rom_asses_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body_part_action_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recorded_value" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_rom_body_part_action">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="action_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body_part_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="standard_value" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_rom_action">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="action_name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_rom_body_part">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order" type="integer"/>
+            <column name="is_left_right" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="b_rom_asses_detail"
+                                 baseColumnNames="rom_asses_id"
+                                 constraintName="fk_rom_asses_detail_id_rom_asses"
+                                 referencedTableName="b_rom_asses"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_rom_asses_detail"
+                                 baseColumnNames="body_part_action_id"
+                                 constraintName="fk_rom_asses_detail_body_part_action_id"
+                                 referencedTableName="b_rom_body_part_action"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_rom_body_part_action"
+                                 baseColumnNames="action_id"
+                                 constraintName="fk_rom_body_part_action_id_rom_action_id"
+                                 referencedTableName="b_rom_action"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_rom_body_part_action"
+                                 baseColumnNames="body_part_id"
+                                 constraintName="fk_rom_body_part_id_rom_body_part_id"
+                                 referencedTableName="b_rom_body_part"
+                                 referencedColumnNames="uuid"/>
+
+        <createTable tableName="b_ashworth_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_ashworth_score">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="ashworth_asses_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body_part_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="score_defination" type="varchar(225)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_ashworth_body_part">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order" type="integer"/>
+            <column name="is_left_right" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <addForeignKeyConstraint baseTableName="b_ashworth_score"
+                                 baseColumnNames="ashworth_asses_id"
+                                 constraintName="fk_ashworth_score_asses_id_ashworth_asses_id"
+                                 referencedTableName="b_ashworth_asses"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_ashworth_score"
+                                 baseColumnNames="body_part_id"
+                                 constraintName="fk_ashworth_score_body_part_id_ashworth_body_part_id"
+                                 referencedTableName="b_ashworth_body_part"
+                                 referencedColumnNames="uuid"/>
+
+        <createTable tableName="b_legs_spasm_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="achilles_tendon_reflex" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ankle_plantar_flexor_tension" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ankle_clonus" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title_score" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_left_right" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_mmt_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_mmt_asses_detail">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="mmt_asses_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body_part_muscle_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="recorded_value" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_mmt_body_part_muscle">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="muscle_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="body_part_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_mmt_muscle">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="action_name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_mmt_body_part">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order" type="integer"/>
+            <column name="is_left_right" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="b_mmt_asses_detail"
+                                 baseColumnNames="mmt_asses_id"
+                                 constraintName="fk_mmt_asses_detail_id_mmt_asses_id"
+                                 referencedTableName="b_mmt_asses"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_mmt_asses_detail"
+                                 baseColumnNames="body_part_muscle_id"
+                                 constraintName="fk_mmt_asses_detail_body_part_muscle_id_body_part_muscle_id"
+                                 referencedTableName="b_mmt_body_part_muscle"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_mmt_body_part_muscle"
+                                 baseColumnNames="muscle_id"
+                                 constraintName="fk_mmt_body_part_muscle_id_mmt_muscle_id"
+                                 referencedTableName="b_mmt_muscle"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_mmt_body_part_muscle"
+                                 baseColumnNames="body_part_id"
+                                 constraintName="fk_mmt_body_part_muscle_id_mmt_body_part_id"
+                                 referencedTableName="b_mmt_body_part"
+                                 referencedColumnNames="uuid"/>
+        <createTable tableName="b_berg_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="sit_to_stand" type="integer" defaultValue="0"/>
+            <column name="standing" type="integer" defaultValue="0"/>
+            <column name="sit" type="integer" defaultValue="0"/>
+            <column name="stand_to_sit" type="integer" defaultValue="0"/>
+            <column name="walk" type="integer" defaultValue="0"/>
+            <column name="eyeClosure_and_stand" type="integer" defaultValue="0"/>
+            <column name="stand_attention" type="integer" defaultValue="0"/>
+            <column name="arms_forward_move" type="integer" defaultValue="0"/>
+            <column name="pick_up_things" type="integer" defaultValue="0"/>
+            <column name="look_back" type="integer" defaultValue="0"/>
+            <column name="turn_around" type="integer" defaultValue="0"/>
+            <column name="leg_lift" type="integer" defaultValue="0"/>
+            <column name="step_stand" type="integer" defaultValue="0"/>
+            <column name="einbeinig" type="integer" defaultValue="0"/>
+            <column name="title_score" type="integer" defaultValue="0"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_holden_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="score" type="integer" defaultValue="0"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_ache_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="body_part" type="varchar(100)"/>
+            <column name="score" type="integer" defaultValue="0"/>
+            <column name="measure" type="varchar(50)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_spinal_injure_location_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="C2" type="integer" defaultValue="0"/>
+            <column name="C3" type="integer" defaultValue="0"/>
+            <column name="C4" type="integer" defaultValue="0"/>
+            <column name="C5" type="integer" defaultValue="0"/>
+            <column name="C6" type="integer" defaultValue="0"/>
+            <column name="C7" type="integer" defaultValue="0"/>
+            <column name="C8" type="integer" defaultValue="0"/>
+            <column name="T1" type="integer" defaultValue="0"/>
+            <column name="T2" type="integer" defaultValue="0"/>
+            <column name="T3" type="integer" defaultValue="0"/>
+            <column name="T4" type="integer" defaultValue="0"/>
+            <column name="T5" type="integer" defaultValue="0"/>
+            <column name="T6" type="integer" defaultValue="0"/>
+            <column name="T7" type="integer" defaultValue="0"/>
+            <column name="T8" type="integer" defaultValue="0"/>
+            <column name="T9" type="integer" defaultValue="0"/>
+            <column name="T10" type="integer" defaultValue="0"/>
+            <column name="T11" type="integer" defaultValue="0"/>
+            <column name="T12" type="integer" defaultValue="0"/>
+            <column name="L1" type="integer" defaultValue="0"/>
+            <column name="L2" type="integer" defaultValue="0"/>
+            <column name="L3" type="integer" defaultValue="0"/>
+            <column name="L4" type="integer" defaultValue="0"/>
+            <column name="L5" type="integer" defaultValue="0"/>
+            <column name="S1" type="integer" defaultValue="0"/>
+            <column name="S2" type="integer" defaultValue="0"/>
+            <column name="S3" type="integer" defaultValue="0"/>
+            <column name="S4_to_S5" type="integer" defaultValue="0"/>
+            <column name="conclusion" type="varchar(50)"/>
+            <column name="feeling_location" type="varchar(50)"/>
+            <column name="is_left_right" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_acupuncture_touch" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_spinal_injure_movement_location_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="C2" type="integer" defaultValue="0"/>
+            <column name="C3" type="integer" defaultValue="0"/>
+            <column name="C4" type="integer" defaultValue="0"/>
+            <column name="C5" type="integer" defaultValue="0"/>
+            <column name="C6" type="integer" defaultValue="0"/>
+            <column name="C7" type="integer" defaultValue="0"/>
+            <column name="C8" type="integer" defaultValue="0"/>
+            <column name="T1" type="integer" defaultValue="0"/>
+            <column name="T2" type="integer" defaultValue="0"/>
+            <column name="T3" type="integer" defaultValue="0"/>
+            <column name="T4" type="integer" defaultValue="0"/>
+            <column name="T5" type="integer" defaultValue="0"/>
+            <column name="T6" type="integer" defaultValue="0"/>
+            <column name="T7" type="integer" defaultValue="0"/>
+            <column name="T8" type="integer" defaultValue="0"/>
+            <column name="T9" type="integer" defaultValue="0"/>
+            <column name="T10" type="integer" defaultValue="0"/>
+            <column name="T11" type="integer" defaultValue="0"/>
+            <column name="T12" type="integer" defaultValue="0"/>
+            <column name="L1" type="integer" defaultValue="0"/>
+            <column name="L2" type="integer" defaultValue="0"/>
+            <column name="L3" type="integer" defaultValue="0"/>
+            <column name="L4" type="integer" defaultValue="0"/>
+            <column name="L5" type="integer" defaultValue="0"/>
+            <column name="S1" type="integer" defaultValue="0"/>
+            <column name="S2" type="integer" defaultValue="0"/>
+            <column name="S3" type="integer" defaultValue="0"/>
+            <column name="S4_to_S5" type="integer" defaultValue="0"/>
+            <column name="title_score" type="integer" defaultValue="0"/>
+            <column name="is_left_right" type="varchar(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="external_sphincter_autonomic_contraction" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="left_of_motion" type="varchar(50)"/>
+            <column name="right_of_motion" type="varchar(50)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_spinal_injure_balance_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="score" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_hand_function_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_finger_function_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="hand_function_asses_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="finger_function_1" type="integer" defaultValue="0"/>
+            <column name="finger_function_2" type="integer" defaultValue="0"/>
+            <column name="finger_function_3" type="integer" defaultValue="0"/>
+            <column name="finger_function_4" type="integer" defaultValue="0"/>
+            <column name="finger_function_5" type="integer" defaultValue="0"/>
+            <column name="finger_function_6" type="integer" defaultValue="0"/>
+            <column name="finger_function_7" type="integer" defaultValue="0"/>
+            <column name="finger_function_8" type="integer" defaultValue="0"/>
+            <column name="finger_function_9" type="integer" defaultValue="0"/>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title_score" type="integer" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_hand_practical_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="hand_function_asses_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="hand_practical_1" type="integer" defaultValue="0"/>
+            <column name="hand_practical_2" type="integer" defaultValue="0"/>
+            <column name="hand_practical_3" type="integer" defaultValue="0"/>
+            <column name="hand_practical_4" type="integer" defaultValue="0"/>
+            <column name="hand_practical_5" type="integer" defaultValue="0"/>
+            <column name="asses_when" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title_score" type="integer" defaultValue="0"/>
+
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="b_finger_function_asses"
+                                 baseColumnNames="hand_function_asses_id"
+                                 constraintName="fk_finger_function_hand_function_id_hand_function_asses_id"
+                                 referencedTableName="b_hand_function_asses"
+                                 referencedColumnNames="uuid"/>
+        <addForeignKeyConstraint baseTableName="b_hand_practical_asses"
+                                 baseColumnNames="hand_function_asses_id"
+                                 constraintName="fk_hand_practical_asses_hand_function_id_hand_function_asses_id"
+                                 referencedTableName="b_hand_function_asses"
+                                 referencedColumnNames="uuid"/>
+
+        <createTable tableName="b_complication_asses">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="patient_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="asses_by_id" type="integer">
+                <constraints nullable="false"/>
+            </column>
+            <column name="complication_id" type="uuid">
+                <constraints nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+
+        <createTable tableName="b_complication">
+            <column name="uuid" type="uuid">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="treatment" type="varchar(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="order" type="integer"/>
+            <column name="is_left_right" type="varchar(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_created" type="timestamp">
+                <constraints nullable="false"/>
+            </column>
+            <column name="when_modified" type="timestamp"/>
+            <column name="who_created" type="varchar(100)"/>
+            <column name="who_modified" type="varchar(100)"/>
+        </createTable>
+        <addForeignKeyConstraint baseTableName="b_complication_asses"
+                                 baseColumnNames="complication_id"
+                                 constraintName="fk_complication_asses_id_complication_id"
+                                 referencedTableName="b_complication"
+                                 referencedColumnNames="uuid"/>
+    </changeSet>
+
+</databaseChangeLog>
