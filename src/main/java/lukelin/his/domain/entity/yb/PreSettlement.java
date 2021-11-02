@@ -19,6 +19,16 @@ public class PreSettlement extends BaseSettlement {
     @Column(name = "return_detail")
     private Boolean returnDetail;
 
+    @Column(name = "full_info")
+    private String fullInfo;
+
+    public String getFullInfo() {
+        return fullInfo;
+    }
+
+    public void setFullInfo(String fullInfo) {
+        this.fullInfo = fullInfo;
+    }
 
     public Boolean getReturnDetail() {
         return returnDetail;

@@ -148,9 +148,9 @@ public class PatientSignInApi extends BaseController {
     }
 
     private void initializeBedList() {
-        Ward ward = Ebean.find(Ward.class).where().eq("name", "icu").findOne();
+        Ward ward = Ebean.find(Ward.class).where().eq("name", "精神病区").findOne();
         for (WardRoom room : ward.getRoomList()) {
-            for (Integer i = 1; i <= 40; i++) {
+            for (Integer i = 201; i <= 220; i++) {
                 WardRoomBed bed = new WardRoomBed();
                 bed.setOrder(i);
                 bed.setEnabled(true);

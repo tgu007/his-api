@@ -4,6 +4,7 @@ import lukelin.common.springboot.dto.DtoConvertible;
 import lukelin.his.domain.entity.BaseEntity;
 import lukelin.his.dto.yb.resp.CenterTreatmentRespDto;
 
+import javax.persistence.Column;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -48,13 +49,24 @@ public class CenterTreatment extends BaseEntity implements DtoConvertible<Center
     private String XZFW;
 
     //收费项目单价
-    private String SFXMDJ;
+    private BigDecimal SFXMDJ;
 
-    public String getSFXMDJ() {
+    @Column(name = "fullInfo")
+    private String fullInfo;
+
+    public String getFullInfo() {
+        return fullInfo;
+    }
+
+    public void setFullInfo(String fullInfo) {
+        this.fullInfo = fullInfo;
+    }
+
+    public BigDecimal getSFXMDJ() {
         return SFXMDJ;
     }
 
-    public void setSFXMDJ(String SFXMDJ) {
+    public void setSFXMDJ(BigDecimal SFXMDJ) {
         this.SFXMDJ = SFXMDJ;
     }
 
@@ -163,13 +175,13 @@ public class CenterTreatment extends BaseEntity implements DtoConvertible<Center
         resp.setStartDate(this.getSTARTDATE());
         resp.setEndDate(this.getENDDATE());
         switch (this.getJYFL()) {
-            case "1":
+            case "01":
                 resp.setChargeLevel("甲");
                 break;
-            case "2":
+            case "02":
                 resp.setChargeLevel("乙");
                 break;
-            case "3":
+            case "03":
                 resp.setChargeLevel("丙");
                 break;
         }

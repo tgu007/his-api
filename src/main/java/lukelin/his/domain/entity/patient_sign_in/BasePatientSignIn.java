@@ -394,7 +394,7 @@ public abstract class BasePatientSignIn extends BaseEntity {
             dto.setDay3024Count(day3024Count);
         }
 
-        dto.setSignedInDays(this.getPatientSignInDays() + 1);
+        dto.setSignedInDays(this.getPatientSignInDays());
         dto.setDay3024Percentage(new BigDecimal(dto.getDay3024Count()).divide(new BigDecimal(dto.getSignedInDays()), 2, RoundingMode.UP).multiply(new BigDecimal("100")));
         //Todo check value need to be configured
         if (dto.getAmount3024Percentage().compareTo(new BigDecimal("20")) < 0)
@@ -439,7 +439,7 @@ public abstract class BasePatientSignIn extends BaseEntity {
             dto.setFromHospital(this.getFromHospital().toDto());
 
         dto.setReference(this.getReference());
-        dto.setSignInDays(this.getPatientSignInDays() + 1);
+        dto.setSignInDays(this.getPatientSignInDays());
         dto.setGender(this.getPatient().getGender().getName());
         if (this.getDiagnoseSet().size() > 0)
             dto.setMainDiagnose(((Diagnose) this.getDiagnoseSet().toArray()[0]).getName());
@@ -595,7 +595,7 @@ public abstract class BasePatientSignIn extends BaseEntity {
 
     public boolean selfPay() {
         if (this.getInsuranceType() != null)
-            return !this.getInsuranceType().getExtraInfo().equals("readCard");
+            return this.getInsuranceType().getExtraInfo().equals("selfPay");
         else
             return true;
     }

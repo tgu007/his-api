@@ -3,35 +3,34 @@ package lukelin.his.domain.entity.patient_sign_in;
 import io.ebean.Ebean;
 import lukelin.common.springboot.dto.DtoConvertible;
 import lukelin.common.springboot.dto.DtoUtils;
-import lukelin.common.springboot.exception.ApiValidationException;
 import lukelin.his.domain.entity.Internal_account.AutoFee;
 import lukelin.his.domain.entity.Internal_account.Fee;
 import lukelin.his.domain.entity.Internal_account.FeePaymentSummary;
 import lukelin.his.domain.entity.Internal_account.Payment;
 import lukelin.his.domain.entity.account.ViewFeeSummary;
 import lukelin.his.domain.entity.account.ViewPaymentSummary;
-import lukelin.his.domain.entity.basic.codeEntity.DepartmentTreatment;
 import lukelin.his.domain.entity.basic.codeEntity.Diagnose;
-import lukelin.his.domain.entity.basic.codeEntity.FromHospital;
 import lukelin.his.domain.entity.basic.ward.WardRoomBed;
-import lukelin.his.domain.entity.yb.*;
+import lukelin.his.domain.entity.yb.FeeDownload;
+import lukelin.his.domain.entity.yb.PreSettlement;
+import lukelin.his.domain.entity.yb.Settlement;
 import lukelin.his.domain.entity.yb.drg.DrgRecord;
+import lukelin.his.domain.entity.yb.hy.PreSettlementHY;
+import lukelin.his.domain.entity.yb.hy.SettlementHY;
 import lukelin.his.domain.enums.PatientSignIn.DrgGroupType;
 import lukelin.his.domain.enums.Prescription.PrescriptionStatus;
 import lukelin.his.dto.basic.resp.setup.BaseCodeDto;
-import lukelin.his.dto.basic.resp.setup.DepartmentTreatmentDto;
 import lukelin.his.dto.basic.resp.setup.DiagnoseDto;
-import lukelin.his.dto.signin.response.PatientSignInListRespDto;
 import lukelin.his.dto.signin.response.PatientSignInRespDto;
-import lukelin.his.dto.yb.req.settlement.ConfirmSettlementDto;
-import lukelin.his.dto.yb.req.settlement.SelfSettleUploadDetailReq;
 import lukelin.his.dto.yb.req.settlement.SelfSettleUploadReq;
 import lukelin.his.dto.yb.req.settlement.SettleUploadReq;
+import lukelin.his.dto.yb_hy.Req.Disease;
+import lukelin.his.dto.yb_hy.Req.SignInReq;
 import lukelin.his.system.Utils;
-import org.apache.commons.lang.StringUtils;
 
 import javax.persistence.*;
 import java.math.BigDecimal;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -61,8 +60,15 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "patientSignIn")
     private Settlement settlement;
 
+
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "patientSignIn")
+    private SettlementHY settlementHY;
+
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "patientSignIn")
     private PreSettlement preSettlement;
+
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "patientSignIn")
+    private PreSettlementHY preSettlementHY;
 
     @OneToOne(cascade = CascadeType.ALL, mappedBy = "patientSignIn")
     private FeeDownload ybFeeDownload;
@@ -80,6 +86,21 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
     @OneToMany(mappedBy = "patientSignIn", cascade = CascadeType.ALL)
     private List<MedicalRecord> medicalRecordList;
 
+    public PreSettlementHY getPreSettlementHY() {
+        return preSettlementHY;
+    }
+
+    public void setPreSettlementHY(PreSettlementHY preSettlementHY) {
+        this.preSettlementHY = preSettlementHY;
+    }
+
+    public SettlementHY getSettlementHY() {
+        return settlementHY;
+    }
+
+    public void setSettlementHY(SettlementHY settlementHY) {
+        this.settlementHY = settlementHY;
+    }
 
     public List<MedicalRecord> getMedicalRecordList() {
         return medicalRecordList;
@@ -214,19 +235,21 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
             respDto.setCurrentBed(bed.toPatientBedDto());
         respDto.setCreatedById(this.getWhoCreatedId());
 
-        if (this.getCardInfo() != null)
+        if (this.getCardInfo() != null) {
             respDto.setCardInfoId(this.getCardInfo().getUuid());
+            respDto.setCardNumber(this.getCardInfo().getPatientNumber());
+        }
 
         respDto.setSelfPay(this.selfPay());
         respDto.setYbSignedIn(this.getYbSignIn() != null);
         if (this.getYbSignIn() != null)
             respDto.setYbId(this.getYbSignIn().getId());
 
-        if (this.getPreSettlement() != null)
-            respDto.setPreSettlement(this.getPreSettlement().toPreSettlementDto());
+        if (this.getPreSettlementHY() != null)
+            respDto.setPreSettlement(this.getPreSettlementHY().toSettlementDto());
 
-        if (this.getSettlement() != null)
-            respDto.setSettlement(this.getSettlement().toSettlementDto());
+        if (this.getSettlementHY() != null)
+            respDto.setSettlement(this.getSettlementHY().toSettlementDto());
 
         if (this.getSingOutRequest() != null) {
             respDto.setSignOutReq(this.getSingOutRequest().toDto());
@@ -236,9 +259,14 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
         if (this.drgGroup != null)
             respDto.setDrgGroup(this.getDrgGroup().toDto());
 
-        respDto.setSignedInDays(this.getPatientSignInDays() + 1);
+        respDto.setSignedInDays(this.getPatientSignInDays());
 
-        respDto.setAverageFeeAmount(respDto.getTotalFeeAmount().divide(new BigDecimal(respDto.getSignedInDays()), BigDecimal.ROUND_HALF_UP).setScale(2));
+        Integer signedInDays = respDto.getSignedInDays();
+        if (signedInDays == 0)
+            respDto.setAverageFeeAmount(respDto.getTotalFeeAmount());
+        else
+            respDto.setAverageFeeAmount(respDto.getTotalFeeAmount().divide(new BigDecimal(respDto.getSignedInDays()), BigDecimal.ROUND_HALF_UP).setScale(2));
+
         if (this.getDrgGroup() != null) {
             BigDecimal amountToCheck;
             if (this.getDrgGroup().getGroupType() == DrgGroupType.average)
@@ -352,4 +380,56 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
     }
 
 
+    public SignInReq toHYYBSignIn(String patientNumber, Boolean isUpdate) {
+        SignInReq signInReq = new SignInReq();
+        signInReq.setPsn_no(patientNumber);
+        signInReq.setInsutype(this.getInsuranceType().getExtraInfo());
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        signInReq.setBegntime(df.format(this.getSignInDate()));
+        signInReq.setMdtrt_cert_type("02");
+        signInReq.setCert_type("2");
+        signInReq.setCertno(this.getPatient().getIdNumber());
+        signInReq.setMed_type("2101"); //普通住院
+        signInReq.setIpt_no(this.getSignInNumberCode());
+        signInReq.setAtddr_no(this.getDoctor().getDoctorAgreementNumber().getAgreementNumber());
+        signInReq.setChfpdr_name(this.getDoctor().getName());
+        if (this.getReference() != null)
+            signInReq.setAdm_diag_dscr(this.getReference());
+        else
+            signInReq.setAdm_diag_dscr("");
+        signInReq.setAdm_dept_codg("default");
+        signInReq.setAdm_dept_name(this.getDepartmentTreatment().getDepartment().getName());
+        signInReq.setAdm_bed("default");
+        Diagnose mainDiagnose = this.getDiagnoseSet().stream().findFirst().get();
+        signInReq.setDscg_maindiag_code(mainDiagnose.getCode());
+        signInReq.setDscg_maindiag_name(mainDiagnose.getName());
+
+        if (isUpdate) {
+            signInReq.setMdtrt_id(this.getYbSignIn().getId());
+            signInReq.setIpt_otp_no(this.getSignInNumberCode());
+        }
+        return signInReq;
+    }
+
+    public List<Disease> toHYYBSignInDisease(String patientNumber, Boolean isUpdate) {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        List<Disease> diseaseList = new ArrayList<>();
+        Disease disease = new Disease();
+        disease.setPsn_no(patientNumber);
+        disease.setDiag_type("1"); //入院诊断
+        disease.setMaindiag_flag("1");
+        disease.setDiag_srt_no("1"); //序列
+        Diagnose mainDiagnose = this.getDiagnoseSet().stream().findFirst().get();
+        disease.setDiag_code(mainDiagnose.getCode());
+        disease.setDiag_name(mainDiagnose.getName());
+        disease.setDiag_dept(this.getDepartmentTreatment().getDepartment().getName());
+        disease.setDise_dor_no(this.getDoctor().getDoctorAgreementNumber().getAgreementNumber());
+        disease.setDise_dor_name(this.getDoctor().getName());
+        disease.setDiag_time(df.format(this.getSignInDate()));
+        disease.setAdm_cond_type("1"); //入院病情类型 1有
+        if (isUpdate)
+            disease.setMdtrt_id(this.getYbSignIn().getId());
+        diseaseList.add(disease);
+        return diseaseList;
+    }
 }

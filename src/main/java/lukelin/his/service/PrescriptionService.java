@@ -363,6 +363,7 @@ public class PrescriptionService extends BaseHisService {
     @Transactional
     public List<Prescription> checkPendingCancelPrescriptionFee(PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.getValidatedPrescriptionListByStatus(reqDto, PrescriptionStatus.approved);
+        prescriptionList.addAll(this.getValidatedPrescriptionListByStatus(reqDto, PrescriptionStatus.disabled));
 
         //作废费用
         for (Prescription prescription : prescriptionList) {

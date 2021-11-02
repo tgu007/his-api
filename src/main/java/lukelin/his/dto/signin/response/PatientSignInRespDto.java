@@ -8,6 +8,7 @@ import lukelin.his.dto.internal_account.FeePaymentSummaryRespDto;
 import lukelin.his.dto.yb.resp.PreSettlementDto;
 import lukelin.his.dto.yb.resp.SettlementDto;
 import lukelin.his.dto.yb.resp.SignOutReqDto;
+import lukelin.his.dto.yb_hy.Resp.SettlementResp;
 
 import java.math.BigDecimal;
 import java.util.Date;
@@ -78,6 +79,8 @@ public class PatientSignInRespDto {
 
     private UUID cardInfoId;
 
+    private String cardNumber;
+
     private Boolean selfPay;
 
     private Boolean ybSignedIn;
@@ -88,9 +91,13 @@ public class PatientSignInRespDto {
 
     private String reference;
 
-    private SettlementDto settlement;
+    //private SettlementDto settlement;
 
-    private PreSettlementDto preSettlement;
+    private SettlementResp settlement;
+
+    //private PreSettlementDto preSettlement;
+
+    private SettlementResp preSettlement;
 
 
     private BigDecimal internalTotalFeeAmount = BigDecimal.ZERO;
@@ -125,6 +132,14 @@ public class PatientSignInRespDto {
     private FromHospitalRespDto fromHospital;
 
     private Integer pendingPrescriptionCount;
+
+    public String getCardNumber() {
+        return cardNumber;
+    }
+
+    public void setCardNumber(String cardNumber) {
+        this.cardNumber = cardNumber;
+    }
 
     public Integer getPendingPrescriptionCount() {
         return pendingPrescriptionCount;
@@ -298,19 +313,19 @@ public class PatientSignInRespDto {
     }
 
 
-    public SettlementDto getSettlement() {
+    public SettlementResp getSettlement() {
         return settlement;
     }
 
-    public void setSettlement(SettlementDto settlement) {
+    public void setSettlement(SettlementResp settlement) {
         this.settlement = settlement;
     }
 
-    public PreSettlementDto getPreSettlement() {
+    public SettlementResp getPreSettlement() {
         return preSettlement;
     }
 
-    public void setPreSettlement(PreSettlementDto preSettlement) {
+    public void setPreSettlement(SettlementResp preSettlement) {
         this.preSettlement = preSettlement;
     }
 

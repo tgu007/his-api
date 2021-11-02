@@ -35,6 +35,7 @@ import lukelin.his.dto.account.response.FeeListDto;
 import lukelin.his.dto.yb.inventory.req.PharmacyOrder;
 import lukelin.his.dto.yb.inventory.req.PharmacyOrderLine;
 import lukelin.his.dto.yb.resp.FeeUploadLineReq;
+import lukelin.his.dto.yb_hy.Req.FeeUploadReqHY;
 import org.apache.commons.lang.StringUtils;
 
 import javax.persistence.*;
@@ -44,6 +45,7 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -617,6 +619,51 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
             return this.getMedicineSnapshot().getMedicine();
         else
             return this.getItemSnapshot().getItem();
+    }
+
+    public FeeUploadReqHY toHYUploadDto() {
+        SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        FeeUploadReqHY uploadReqHY = new FeeUploadReqHY();
+        uploadReqHY.setFeedetl_sn(this.getUuid().toString().substring(0, 30));
+        uploadReqHY.setMemo(this.getUuid().toString());
+        uploadReqHY.setMdtrt_id(this.getPatientSignIn().getYbSignIn().getId());
+        uploadReqHY.setPsn_no(this.getPatientSignIn().getCardInfo().getPatientNumber());
+        uploadReqHY.setFee_ocur_time(df.format(this.getFeeDate()));
+        uploadReqHY.setDet_item_fee_sumamt(this.getTotalAmount().toString());
+        uploadReqHY.setCnt(this.getQuantity().toString());
+        uploadReqHY.setPric(this.getUnitAmount().toString());
+        uploadReqHY.setMed_type("2101");
+        String emptyString = "default";
+        uploadReqHY.setBilg_dept_name(this.getWardDepartment().getDepartment().getName());
+        uploadReqHY.setBilg_dept_codg(this.getWardDepartment().getDepartment().getCode());
+        uploadReqHY.setBilg_dr_name(emptyString);
+        uploadReqHY.setBilg_dr_codg(emptyString);
+
+        if (this.getPrescription() != null) {
+            Prescription prescription = this.getPrescription();
+            Employee doctor = Ebean.find(Employee.class).where().eq("accountId", prescription.getWhoCreatedId()).findOne();
+            uploadReqHY.setBilg_dr_name(doctor.getName());
+            uploadReqHY.setBilg_dr_codg(doctor.getDoctorAgreementNumber().getAgreementNumber());
+        }
+
+        uploadReqHY.setBilg_dept_codg(this.getDepartment().getDepartment().getName());
+        uploadReqHY.setBilg_dept_name(this.getDepartmentName());
+
+        if (this.getEntityType() == EntityType.medicine) {
+            Medicine medicine = this.medicineSnapshot.getMedicine();
+            uploadReqHY.setMed_list_codg(medicine.getCenterMedicine().getBZBM());
+            uploadReqHY.setMedins_list_codg(medicine.getCode().toString());
+        } else if (this.getEntityType() == EntityType.item) {
+            Item item = this.getItemSnapshot().getItem();
+            uploadReqHY.setMed_list_codg(item.getCenterTreatment().getBZBM());
+            uploadReqHY.setMedins_list_codg(item.getCode().toString());
+        } else if (this.getEntityType() == EntityType.treatment) {
+            Treatment treatment = this.getTreatmentSnapshot().getTreatment();
+            uploadReqHY.setMed_list_codg(treatment.getCenterTreatment().getBZBM());
+            uploadReqHY.setMedins_list_codg(treatment.getCode().toString());
+        }
+
+        return uploadReqHY;
     }
 
     public FeeUploadLineReq toUploadDto() {

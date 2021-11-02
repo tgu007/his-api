@@ -20,6 +20,7 @@ import lukelin.his.domain.entity.patient_sign_in.PatientSignIn;
 import lukelin.his.domain.entity.patient_sign_in.PatientSignInView;
 import lukelin.his.domain.entity.yb.*;
 import lukelin.his.domain.entity.yb.drg.*;
+import lukelin.his.domain.entity.yb.hy.SettlementHY;
 import lukelin.his.domain.enums.Basic.UserRoleType;
 import lukelin.his.domain.enums.Fee.FeeStatus;
 import lukelin.his.domain.enums.PatientSignIn.PatientSignInStatus;
@@ -341,6 +342,7 @@ public class YBService extends BaseHisService {
         this.restTemplate.postForObject(url, signInChangeReq, Void.class);
     }
 
+    @Transactional
     public void cancelYBSignIn(PatientSignIn patientSignIn, ClientIpInfo clientIpInfo) {
         //医保取消住院
         YBSignIn ybSignIn = patientSignIn.getYbSignIn();
@@ -794,35 +796,33 @@ public class YBService extends BaseHisService {
     }
 
     @Transactional
-    public Settlement finalSelfSettle(UUID patientSignInId) {
+    public SettlementHY finalSelfSettle(UUID patientSignInId) {
         PatientSignIn patientSignIn = this.findById(PatientSignIn.class, patientSignInId);
         UUID newId = UUID.randomUUID();
 
-        Settlement newSettlement = null;
-        if (this.selfPayNeedUpload) {
-            SelfSettleUploadReq uploadReq = patientSignIn.toSelfSettleUploadReq(newId.toString());
-            String url = this.interfaceBaseUrl + "yb/patient/sign_in/settle/self";
-            SettlementSaveDto settlementSaveDto = this.restTemplate.postForObject(url, uploadReq, SettlementSaveDto.class);
-            settlementSaveDto.setPatientSignInId(patientSignInId);
-            newSettlement = settlementSaveDto.toEntity();
-            newSettlement.setZfje(uploadReq.getFyze());
-            newSettlement.setZje(uploadReq.getFyze());
+        SettlementHY newSettlement = null;
+        // if (this.selfPayNeedUpload) {
+//            SelfSettleUploadReq uploadReq = patientSignIn.toSelfSettleUploadReq(newId.toString());
+//            String url = this.interfaceBaseUrl + "yb/patient/sign_in/settle/self";
+//            SettlementSaveDto settlementSaveDto = this.restTemplate.postForObject(url, uploadReq, SettlementSaveDto.class);
+//            settlementSaveDto.setPatientSignInId(patientSignInId);
+//            newSettlement = settlementSaveDto.toEntity();
+//            newSettlement.setZfje(uploadReq.getFyze());
+//            newSettlement.setZje(uploadReq.getFyze());
+        //   } else {
+        newSettlement = new SettlementHY();
+        newSettlement.setPatientSignIn(patientSignIn);
+        Optional<ViewFeeSummary> optionalViewFeeSummary = Ebean.find(ViewFeeSummary.class).where().eq("patientSignInId", patientSignInId).findOneOrEmpty();
+        if (optionalViewFeeSummary.isPresent()) {
+            newSettlement.setMedfee_sumamt(optionalViewFeeSummary.get().getTotalAmount());
+            newSettlement.setFulamt_ownpay_amt(optionalViewFeeSummary.get().getTotalAmount());
         } else {
-            newSettlement = new Settlement();
-            newSettlement.setPatientSignIn(patientSignIn);
-            newSettlement.setJsbh("0");
-            newSettlement.setYbjsh("0");
-            Optional<ViewFeeSummary> optionalViewFeeSummary = Ebean.find(ViewFeeSummary.class).where().eq("patientSignInId", patientSignInId).findOneOrEmpty();
-            if (optionalViewFeeSummary.isPresent()) {
-                newSettlement.setZje(optionalViewFeeSummary.get().getTotalAmount());
-                newSettlement.setZfje(optionalViewFeeSummary.get().getTotalAmount());
-            } else {
-                newSettlement.setZje(BigDecimal.ZERO);
-                newSettlement.setZfje(BigDecimal.ZERO);
-            }
+            newSettlement.setMedfee_sumamt(BigDecimal.ZERO);
+            newSettlement.setFulamt_ownpay_amt(BigDecimal.ZERO);
         }
+        // }
         //Should get nothing, just in case
-        List<Settlement> settlementList = ebeanServer.find(Settlement.class).where().eq("patientSignIn.uuid", patientSignInId).findList();
+        List<SettlementHY> settlementList = ebeanServer.find(SettlementHY.class).where().eq("patientSignIn.uuid", patientSignInId).findList();
         ebeanServer.deleteAll(settlementList);
         ebeanServer.save(newSettlement);
         return newSettlement;

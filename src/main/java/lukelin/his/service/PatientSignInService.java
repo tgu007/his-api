@@ -76,6 +76,9 @@ public class PatientSignInService extends BaseService {
     private YBService ybService;
 
     @Autowired
+    private YBServiceHY ybServiceHY;
+
+    @Autowired
     private YBInventoryService ybInventoryService;
 
 
@@ -84,6 +87,9 @@ public class PatientSignInService extends BaseService {
 
     @Value("${uploadYBPatient}")
     private Boolean enableYBService;
+
+    @Value("${enableHYYB}")
+    private Boolean enableHYYBService;
 
 
     public PagedList<Patient> getPatientList(Integer pageNum, PatientSearchDto patientSearchDto) {
@@ -189,14 +195,19 @@ public class PatientSignInService extends BaseService {
         }
         ebeanServer.update(patientSignIn);
 
-//        if (patientSignInDto.getUuid() != null) //如果为新记录，已经从数据库读取过，这里只读取更新的数据
-//            patientSignIn = this.findById(PatientSignIn.class, patientSignIn.getUuid());
+        if (patientSignInDto.getUuid() != null) //如果为新记录，已经从数据库读取过，这里只读取更新的数据
+            patientSignIn = this.findById(PatientSignIn.class, patientSignIn.getUuid());
 
 
         if (patientSignIn.getStatus() == PatientSignInStatus.signedIn) //更新医保入院信息
         {
-            if (patientSignIn.getYbSignIn() != null)
-                this.ybService.updateSignInInfo(patientSignIn);
+            if (patientSignIn.getYbSignIn() != null) {
+                if (this.enableYBService)
+                    this.ybService.updateSignInInfo(patientSignIn);
+                else if (this.enableHYYBService)
+                    this.ybServiceHY.updateSignInInfo(patientSignIn);
+            }
+
         }
 
         //this.ybService.savePatientSignIn(patientSignIn, patientSignInDto);
@@ -205,7 +216,7 @@ public class PatientSignInService extends BaseService {
     }
 
     private void changeDepartment(PatientSignIn patientSignIn, DepartmentTreatment existingDepartment) {
-        if (patientSignIn.getStatus() != PatientSignInStatus.signedIn)
+        if (patientSignIn.getStatus() != PatientSignInStatus.signedIn && patientSignIn.getStatus() != PatientSignInStatus.pendingSignIn)
             throw new ApiValidationException("当前病人入院状态不允许专科");
         PatientSignInDepartmentChange departmentChange = new PatientSignInDepartmentChange();
         departmentChange.setPatientSignIn(patientSignIn);
@@ -232,7 +243,7 @@ public class PatientSignInService extends BaseService {
         if (patientSignInFilter.getDepartmentIdList() != null)
             el = el.in("departmentTreatment.uuid", patientSignInFilter.getDepartmentIdList());
 
-        if (patientSignInFilter.getInsuranceTypeList() != null)
+        if (patientSignInFilter.getInsuranceTypeList() != null && patientSignInFilter.getInsuranceTypeList().size() > 0)
             el = el.in("insuranceType.name", patientSignInFilter.getInsuranceTypeList());
 
         if (patientSignInFilter.getPendingUploadFee() != null) {
@@ -252,10 +263,17 @@ public class PatientSignInService extends BaseService {
         ebeanServer.update(patientSignIn);
 
         //判断是否为医保
-        if (!patientSignIn.selfPay())
-            this.ybService.yBSignIn(patientSignIn, clientIpInfo);
-        else
-            this.ybService.selfSignIn(patientSignIn);
+        if (!patientSignIn.selfPay()) {
+            if (this.enableYBService)
+                this.ybService.yBSignIn(patientSignIn, clientIpInfo);
+            else if (this.enableHYYBService) {
+                //this.ybServiceHY.insuTypeCheck(patientSignIn);
+                this.ybServiceHY.yBSignIn(patientSignIn);
+            }
+        }
+//
+//        else
+//            this.ybService.selfSignIn(patientSignIn);
         return patientSignIn;
     }
 
@@ -298,8 +316,12 @@ public class PatientSignInService extends BaseService {
         PatientSignInBed newPatientSignInBed = signInBed.toEntity();
         ebeanServer.save(newPatientSignInBed);
 
-        if (!patientSignIn.selfPay())
-            this.ybService.updateSignInInfo(patientSignIn);
+        if (!patientSignIn.selfPay()) {
+            if (this.enableYBService)
+                this.ybService.updateSignInInfo(patientSignIn);
+            else if (this.enableHYYBService)
+                this.ybServiceHY.updateSignInInfo(patientSignIn);
+        }
         return newPatientSignInBed.getUuid();
     }
 
@@ -521,6 +543,8 @@ public class PatientSignInService extends BaseService {
 
         if (this.enableYBService)
             this.ybService.signOut(patientSignIn);
+        if (this.enableHYYBService)
+            this.ybServiceHY.signOut(patientSignIn);
         this.notificationService.patientSignOutRequest(patientSignIn);
         return signOutRequest;
     }
@@ -592,20 +616,25 @@ public class PatientSignInService extends BaseService {
                 throw new ApiValidationException("存在关于费用的未上传的耗材或药品库存信息，请尝试重新上传医保费用。");
         }
 
+//        if (this.enableHYYBService) {
+//            if (this.ybService.anyPendingUploadFee(patientSignIn.getUuid()))
+//                throw new ApiValidationException("signIn.error.signOutRequest.notUploadedFee");
+//        }
+
         if (!patientSignIn.selfPay()) {
-            if (patientSignIn.getPreSettlement() == null)
+            if (patientSignIn.getPreSettlementHY() == null)
                 throw new ApiValidationException("signIn.error.signOutRequest.noPreSettlement");
 
             ViewFeeSummary patientFeeInfo = Ebean.find(ViewFeeSummary.class).where().eq("patientSignInId", patientSignIn.getUuid()).findOne();
-            if (patientSignIn.getPreSettlement().getZje().compareTo(patientFeeInfo.getTotalAmount()) != 0)
+            if (patientSignIn.getPreSettlementHY().getMedfee_sumamt().compareTo(patientFeeInfo.getTotalAmount()) != 0)
                 throw new ApiValidationException("医保预结算费用与系统记录不符合，请尝试重新预结");
 
-            //有没有费用未从中心下载
-            if (!this.ybService.allFeeDownloadedFromYB(patientSignIn.getUuid()))
-                throw new ApiValidationException("有未从医保中心下载的费用，请下载所有的医保中心费用用以核对");
-
-            if (!this.ybService.allFeeValidFromYB(patientSignIn.getUuid()))
-                throw new ApiValidationException("中心费用明细核对出错，请打开医保对账功能，并检查有问题的明细费用");
+//            //有没有费用未从中心下载
+//            if (!this.ybService.allFeeDownloadedFromYB(patientSignIn.getUuid()))
+//                throw new ApiValidationException("有未从医保中心下载的费用，请下载所有的医保中心费用用以核对");
+//
+//            if (!this.ybService.allFeeValidFromYB(patientSignIn.getUuid()))
+//                throw new ApiValidationException("中心费用明细核对出错，请打开医保对账功能，并检查有问题的明细费用");
         }
 
         //查找是否有未处理的领药单

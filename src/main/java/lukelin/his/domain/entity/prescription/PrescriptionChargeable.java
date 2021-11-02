@@ -156,7 +156,7 @@ public class PrescriptionChargeable extends BaseEntity implements DtoConvertible
 
     public void setFeeValue(Fee newFee) {
         newFee.setQuantity(this.getQuantity());
-        if(this.getPrescriptionTreatment()!= null && this.getPrescriptionTreatment().getAdjustQuantity() != null)
+        if (this.getPrescriptionTreatment() != null && this.getPrescriptionTreatment().getAdjustQuantity() != null)
             newFee.setQuantity(this.getPrescriptionTreatment().getAdjustQuantity());
 //        if (this.getPrescriptionMedicine() != null)
 //            this.getPrescriptionMedicine().setFeeValue(newFee);
@@ -166,10 +166,14 @@ public class PrescriptionChargeable extends BaseEntity implements DtoConvertible
     }
 
     public boolean executeOnPrescriptionStartDate() {
-        if (this.getFirstDayQuantity() == null)
-            return false;
-        else
-            return this.getFirstDayQuantity().compareTo(BigDecimal.ZERO) > 0;
+        if (this.prescription.isOneOff())
+            return true;
+        else {
+            if (this.getFirstDayQuantity() == null)
+                return false;
+            else
+                return this.getFirstDayQuantity().compareTo(BigDecimal.ZERO) > 0;
+        }
     }
 
 }

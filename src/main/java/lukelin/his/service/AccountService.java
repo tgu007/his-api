@@ -25,6 +25,7 @@ import lukelin.his.domain.entity.patient_sign_in.PatientSignIn;
 import lukelin.his.domain.entity.prescription.Prescription;
 import lukelin.his.domain.entity.prescription.PrescriptionChangeLog;
 import lukelin.his.domain.entity.yb.Settlement;
+import lukelin.his.domain.entity.yb.hy.SettlementHY;
 import lukelin.his.domain.enums.*;
 import lukelin.his.domain.enums.Fee.FeeRecordMethod;
 import lukelin.his.domain.enums.Fee.FeeStatus;
@@ -39,10 +40,7 @@ import lukelin.his.dto.account.filter.AutoFeeFilterDto;
 import lukelin.his.dto.account.filter.FeeFilterDto;
 import lukelin.his.dto.account.filter.PaymentListFilter;
 import lukelin.his.dto.account.request.*;
-import lukelin.his.dto.account.response.FeeCheckEntityDto;
-import lukelin.his.dto.account.response.FeeCheckPrescriptionDto;
-import lukelin.his.dto.account.response.FeeListDto;
-import lukelin.his.dto.account.response.InvoiceDto;
+import lukelin.his.dto.account.response.*;
 import lukelin.his.dto.prescription.response.PrescriptionListRespDto;
 import lukelin.his.system.NoStockException;
 import lukelin.his.system.Utils;
@@ -81,8 +79,6 @@ public class AccountService extends BaseHisService {
     @Autowired
     private NotificationService notificationService;
 
-    @Autowired
-    private YBService ybService;
 
     @Autowired
     private YBInventoryService ybInventoryService;
@@ -92,6 +88,16 @@ public class AccountService extends BaseHisService {
 
     @Value("${uploadYBPatient}")
     private Boolean enableYBService;
+
+    @Value("${enableHYYB}")
+    private Boolean enableHYYBService;
+
+    @Autowired
+    private YBService ybService;
+
+
+    @Autowired
+    private YBServiceHY ybServiceHy;
 
 
     public void createPayment(PaymentSaveDto paymentSaveDto) {
@@ -354,17 +360,19 @@ public class AccountService extends BaseHisService {
             if (newFee.getFeeDate().before(prescription.getStartDate()))
                 return "费用日期不可在医嘱开始日期之前";
 
-            PrescriptionChangeLog disableLog = prescription.findDisableLog();
-            if (disableLog != null && disableLog.getDate().before(newFee.getFeeDate()))
-                return "计费日期不能晚于医嘱结束之后";
+            if (!newFee.getPrescription().isOneOff()) {
+                PrescriptionChangeLog disableLog = prescription.findDisableLog();
+                if (disableLog != null && disableLog.getDate().before(newFee.getFeeDate()))
+                    return "计费日期不能晚于医嘱结束之后";
 
 
-            if (newFee.getClass() == Fee.class && checkFeeHistoryCount && prescription.getPrescriptionType() != PrescriptionType.Text) {
-                int allowedExecutionCount = this.prescriptionService.getAllowedExecutionCount(prescription, newFee.getFeeDate(), newFee.getFeeEntityId());
+                if (newFee.getClass() == Fee.class && checkFeeHistoryCount && prescription.getPrescriptionType() != PrescriptionType.Text) {
+                    int allowedExecutionCount = this.prescriptionService.getAllowedExecutionCount(prescription, newFee.getFeeDate(), newFee.getFeeEntityId());
 
-                if (allowedExecutionCount < newFee.getQuantity().intValue())
-                    return "费用次数错误，剩余可计费次数：" + allowedExecutionCount + "尝试计费次数：" + newFee.getQuantity().intValue();
+                    if (allowedExecutionCount < newFee.getQuantity().intValue())
+                        return "费用次数错误，剩余可计费次数：" + allowedExecutionCount + "尝试计费次数：" + newFee.getQuantity().intValue();
 
+                }
             }
         }
         return null;
@@ -430,7 +438,10 @@ public class AccountService extends BaseHisService {
             this.generateReturnOrder(lineList);
         } else {
             //删除医保端费用
-            this.ybService.cancelFee(feeToCancel);
+            if (enableYBService)
+                this.ybService.cancelFee(feeToCancel);
+            else if (enableHYYBService)
+                this.ybServiceHy.cancelFee(feeToCancel);
 
             if (feeToCancel.getEntityType() == EntityType.item) {
                 List<CachedItemTransaction> reverseTransactionList = feeToCancel.createItemReverseTransactionList();
@@ -476,7 +487,10 @@ public class AccountService extends BaseHisService {
                         this.inventoryMedicineService.updateMedicineStockCache(medicineTransaction);
                 }
 
-                this.ybService.cancelFee(fee);
+                if (enableYBService)
+                    this.ybService.cancelFee(fee);
+                else if (enableHYYBService)
+                    this.ybServiceHy.cancelFee(fee);
                 this.updateFeeStatus(fee, FeeStatus.canceled, FeeStatusAction.cancel, cancelReason);
             }
         }
@@ -895,6 +909,17 @@ public class AccountService extends BaseHisService {
     }
 
     @Transactional
+    public SettlementHYSummaryResp getSettlementHYSummary(UUID patientSignInId) {
+        SettlementHYSummaryResp resp = new SettlementHYSummaryResp();
+        PatientSignIn patientSignIn = this.findById(PatientSignIn.class, patientSignInId);
+        ViewFeeSummaryByType feeSummaryByType = ebeanServer.find(ViewFeeSummaryByType.class).where()
+                .eq("patientSignInId", patientSignInId).findOne();
+        BeanUtils.copyProperties(feeSummaryByType, resp);
+        return resp;
+    }
+
+
+    @Transactional
     public InvoiceDto generateInvoice(UUID patientSignInId, String invoiceNumber) {
         //更新系统发票号
         this.updateSystemInvoiceNumber(invoiceNumber);
@@ -903,20 +928,21 @@ public class AccountService extends BaseHisService {
         Date dateNow = new Date();
         LocalDate localDateNow = LocalDate.now();
         PatientSignIn patientSignIn = this.findById(PatientSignIn.class, patientSignInId);
-        Settlement settlement = patientSignIn.getSettlement();
+        //Settlement settlement = patientSignIn.getSettlement();
+        SettlementHY settlementHY = patientSignIn.getSettlementHY();
 
         InvoiceDto invoiceDto = new InvoiceDto();
         invoiceDto.setSelfPay(patientSignIn.selfPay());
         invoiceDto.setInvoiceNumber(invoiceNumber);
-        if (settlement.getYbjsh() != null)
-            invoiceDto.setYbjsh(patientSignIn.getSettlement().getYbjsh());
+        if (settlementHY != null && settlementHY.getSetl_id() != null)
+            invoiceDto.setYbjsh(settlementHY.getSetl_id());
 
         WardRoomBed bed = patientSignIn.findLastOrCurrentBed();
         if (bed != null)
             invoiceDto.setWardInfo(bed.getWardRoom().getWard().getName());
         invoiceDto.setGender(patientSignIn.getPatient().getGender().getName());
         invoiceDto.setDepartmentName(patientSignIn.getDepartmentTreatment().getDepartment().getName());
-        Integer signInDays = patientSignIn.getPatientSignInDays() + 1;
+        Integer signInDays = patientSignIn.getPatientSignInDays();
         invoiceDto.setTotalSignInDays(signInDays.toString());
 
 
@@ -952,22 +978,23 @@ public class AccountService extends BaseHisService {
 
         //结算信息
         if (!patientSignIn.selfPay()) {
-            invoiceDto.setCashAmount(settlement.getXJJE());
-            invoiceDto.setFromBalanceThisYear(settlement.getDNZHZF());
-            invoiceDto.setFromBalancePreviousYear(settlement.getLNZHZF());
-            invoiceDto.setCivilSubsidy(settlement.getGWYBZZF());
-            invoiceDto.setSeriousDiseaseSubsidy(settlement.getDBJE());
-            invoiceDto.setOverallPayment(settlement.getTCJE());
-            invoiceDto.setYbSelfAmount(settlement.getGRZF());
-            invoiceDto.setYbSelfAmountAll(settlement.getZfje());
-            invoiceDto.setYbSelfAmountRatio(settlement.getZlje());
-            invoiceDto.setCardBalance(settlement.getJSHDNGZYE());
-            invoiceDto.setYbAccessAmount(settlement.getQFX());
-            invoiceDto.setRetirementFund(settlement.getLXJJZF());
-            invoiceDto.setMedicalSubsidy(settlement.getYLJZ());
-            invoiceDto.setSpecialCareSubsidy(settlement.getYFBZ());
-            invoiceDto.setSupplementInsurance(settlement.getXJJE());
-            invoiceDto.setFamilyFund(settlement.getJTGJJJ());
+            invoiceDto.setCashAmount(settlementHY.getPsn_part_amt());
+            invoiceDto.setFeeTotalSelf(settlementHY.getPsn_part_amt());
+//            invoiceDto.setFromBalanceThisYear(settlement.getDNZHZF());
+//            invoiceDto.setFromBalancePreviousYear(settlement.getLNZHZF());
+//            invoiceDto.setCivilSubsidy(settlement.getGWYBZZF());
+//            invoiceDto.setSeriousDiseaseSubsidy(settlement.getDBJE());
+//            invoiceDto.setOverallPayment(settlement.getTCJE());
+//            invoiceDto.setYbSelfAmount(settlement.getGRZF());
+//            invoiceDto.setYbSelfAmountAll(settlement.getZfje());
+//            invoiceDto.setYbSelfAmountRatio(settlement.getZlje());
+//            invoiceDto.setCardBalance(settlement.getJSHDNGZYE());
+//            invoiceDto.setYbAccessAmount(settlement.getQFX());
+//            invoiceDto.setRetirementFund(settlement.getLXJJZF());
+//            invoiceDto.setMedicalSubsidy(settlement.getYLJZ());
+//            invoiceDto.setSpecialCareSubsidy(settlement.getYFBZ());
+//            invoiceDto.setSupplementInsurance(settlement.getXJJE());
+//            invoiceDto.setFamilyFund(settlement.getJTGJJJ());
 //            invoiceDto.setFundInfo1("自负金额:" + invoiceDto.getYbSelfAmount().toString() + "自理:" + invoiceDto.getYbSelfAmountRatio().toString() + "自费:" + invoiceDto.getYbSelfAmountAll().toString() + "卡余额:" + invoiceDto.getCardBalance().toString());
 //            invoiceDto.setFundInfo2("起付标准:" + invoiceDto.getYbAccessAmount().toString() + "离休基金:" + invoiceDto.getRetirementFund().toString() + "医疗补助:" + invoiceDto.getMedicalSubsidy().toString() + "优抚补助:" + invoiceDto.getSpecialCareSubsidy().toString());
 //            invoiceDto.setFundInfo3("补充医疗保险:" + invoiceDto.getSupplementInsurance().toString() + "家庭共济基金:" + invoiceDto.getFamilyFund().toString());

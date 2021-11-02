@@ -4,6 +4,7 @@ import lukelin.common.springboot.dto.DtoConvertible;
 import lukelin.his.domain.entity.BaseEntity;
 import lukelin.his.dto.yb.inventory.resp.CenterMedicineRespDto;
 
+import javax.persistence.Column;
 import javax.persistence.Table;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -76,6 +77,17 @@ public class CenterMedicine extends BaseEntity implements DtoConvertible<CenterM
 
     //转换比
     private BigDecimal ZHB;
+
+    @Column(name = "fullInfo")
+    private String fullInfo;
+
+    public String getFullInfo() {
+        return fullInfo;
+    }
+
+    public void setFullInfo(String fullInfo) {
+        this.fullInfo = fullInfo;
+    }
 
     public String getLSH() {
         return LSH;

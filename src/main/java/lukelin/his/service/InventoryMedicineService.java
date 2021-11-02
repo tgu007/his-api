@@ -52,8 +52,18 @@ public class InventoryMedicineService extends BaseHisService {
     @Autowired
     private PatientSignInService patientSignInService;
 
+    @Value("${uploadYBPatient}")
+    private Boolean enableYBService;
+
+    @Value("${enableHYYB}")
+    private Boolean enableHYYBService;
+
     @Autowired
     private YBService ybService;
+
+
+    @Autowired
+    private YBServiceHY ybServiceHy;
 
     @Autowired
     private YBInventoryService ybInventoryService;
@@ -709,7 +719,10 @@ public class InventoryMedicineService extends BaseHisService {
                             continue;
                         this.ybInventoryService.processPrescriptionMedicineReturnOrder(returnOrderLine, reverseTransactionList);
                     }
-                    this.ybService.cancelFee(fee);
+                    if (enableYBService)
+                        this.ybService.cancelFee(fee);
+                    else if(enableHYYBService)
+                        this.ybServiceHy.cancelFee(fee);
                 }
 
                 //如果部分退药，需在原发药单上生成一个新的剩余数量的发药列

@@ -191,6 +191,11 @@ public class AccountApi extends BaseController {
         return decoratedResponse(this.accountService.generateInvoice(patientSignInId, invoiceNumber));
     }
 
+    @PostMapping("invoice/settle/hy/summary/{patientSignInId}")
+    public DecoratedDTO<SettlementHYSummaryResp> getSettlementHYSummary(@PathVariable UUID patientSignInId) {
+        return decoratedResponse(this.accountService.getSettlementHYSummary(patientSignInId));
+    }
+
     @PostMapping("auto/{autoFeeId}/manual_run")
     public void autoFeeManualRun(@PathVariable UUID autoFeeId) {
         this.accountService.autoFeeManualRun(autoFeeId);

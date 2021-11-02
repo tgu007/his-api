@@ -86,6 +86,12 @@ public class BasicApi extends BaseController {
         return decoratedResponse(DtoUtils.toDtoList(warehouseTypeList));
     }
 
+    @GetMapping("insurance_type/list")
+    public DecoratedDTO<List<DictionaryDto>> getInsuranceTypeList() {
+        List<Dictionary> insuranceTypeList = basicService.getDictionaryList(configBeanProp.getInsuranceType());
+        return decoratedResponse(DtoUtils.toDtoList(insuranceTypeList));
+    }
+
     @GetMapping("medicine_type/list")
     public DecoratedDTO<List<DictionaryDto>> getMedicineTypeList() {
         List<Dictionary> medicineTypeList = basicService.getDictionaryList(configBeanProp.getMedicineType());
