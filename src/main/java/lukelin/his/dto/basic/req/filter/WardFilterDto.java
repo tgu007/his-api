@@ -8,6 +8,16 @@ public class WardFilterDto {
 
     private Boolean hideEmptyBed;
 
+    private String searchCode;
+
+    public String getSearchCode() {
+        return searchCode;
+    }
+
+    public void setSearchCode(String searchCode) {
+        this.searchCode = searchCode;
+    }
+
     public Boolean getHideEmptyBed() {
         return hideEmptyBed;
     }

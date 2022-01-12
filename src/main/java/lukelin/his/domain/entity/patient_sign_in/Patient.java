@@ -207,7 +207,8 @@ public class Patient extends BaseEntity implements DtoConvertible<PatientDto> {
         if (this.idType != null)
             patientDto.setIdTypeDto(this.idType.toDto());
 
-        Optional<PatientSignIn> optionalCurrentSignIn = this.getSignInHistoryList().stream().filter(s -> s.getStatus() != PatientSignInStatus.signedOut).max(Comparator.comparing(PatientSignIn::getWhenCreated));
+        Optional<PatientSignIn> optionalCurrentSignIn =
+                this.getSignInHistoryList().stream().filter(s -> s.getStatus() != PatientSignInStatus.signedOut && s.getStatus() != PatientSignInStatus.canceled).max(Comparator.comparing(PatientSignIn::getWhenCreated));
 
         optionalCurrentSignIn.ifPresent(patientSignIn -> patientDto.setCurrentSignInId(patientSignIn.getUuid()));
 

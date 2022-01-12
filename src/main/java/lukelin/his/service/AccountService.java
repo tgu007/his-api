@@ -122,7 +122,7 @@ public class AccountService extends BaseHisService {
         return findPagedList(el, pageNum);
     }
 
-    public PagedList<Payment> getAllPaymentList(PaymentListFilter filter, int pageNum) {
+    public List<Payment> getAllPaymentList(PaymentListFilter filter) {
         ExpressionList<Payment> el = ebeanServer.find(Payment.class)
                 .where()
                 .or()
@@ -130,7 +130,7 @@ public class AccountService extends BaseHisService {
                 .eq("status", PaymentStatus.refunded)
                 .endOr()
                 .between("whenCreated", filter.getStartDate(), filter.getEndDate());
-        return findPagedList(el, pageNum);
+        return el.findList();
     }
 
     public List<Payment> getPaymentSummaryList(AccountSummaryFilter accountSummaryFilter) {
@@ -575,7 +575,12 @@ public class AccountService extends BaseHisService {
         //上传费用
         if (this.enableYBService) {
             this.ybService.uploadAllFee();
-            this.ybInventoryService.uploadPatientPendingFeeInventory(null);
+            //this.ybInventoryService.uploadPatientPendingFeeInventory(null);
+        }
+
+        if (this.enableHYYBService) {
+            this.ybServiceHy.uploadAllFee();
+            //this.ybInventoryService.uploadPatientPendingFeeInventory(null);
         }
     }
 
@@ -752,15 +757,15 @@ public class AccountService extends BaseHisService {
                 newBedFee.setDepartmentName(newBedFee.getDepartment().getDepartment().getName());
                 //TreatmentSnapshot latestSnapShot = bed.getTreatment().findLatestSnapshot();
                 BigDecimal bedFeeLimit = null;
-                if (!patientSignIn.selfPay())
-                    bedFeeLimit = new BigDecimal("50.00");
+//                if (!patientSignIn.selfPay())
+//                    bedFeeLimit = new BigDecimal("50.00");
                 bed.getTreatment().setFeeValue(newBedFee, bedFeeLimit);
-                if (bedFeeLimit != null && bed.getTreatment().getListPrice().compareTo(bedFeeLimit) > 0) {
-                    if (extraBedFeeItem == null)
-                        extraBedFeeItem = ebeanServer.find(ChargeableItem.class).where().eq("name", "床位调价").findOne();
-                    this.createInternalExtraBedFee(patientSignIn, extraBedFeeItem, bed.getTreatment().getListPrice().subtract(bedFeeLimit));
-
-                }
+//                if (bedFeeLimit != null && bed.getTreatment().getListPrice().compareTo(bedFeeLimit) > 0) {
+//                    if (extraBedFeeItem == null)
+//                        extraBedFeeItem = ebeanServer.find(ChargeableItem.class).where().eq("name", "床位调价").findOne();
+//                    this.createInternalExtraBedFee(patientSignIn, extraBedFeeItem, bed.getTreatment().getListPrice().subtract(bedFeeLimit));
+//
+//                }
                 ebeanServer.save(newBedFee);
             }
         }
@@ -973,13 +978,15 @@ public class AccountService extends BaseHisService {
         ViewFeeSummaryByType feeSummaryByType = ebeanServer.find(ViewFeeSummaryByType.class).where()
                 .eq("patientSignInId", patientSignInId).findOne();
         BeanUtils.copyProperties(feeSummaryByType, invoiceDto);
-        invoiceDto.setTotalAmountChinese(Utils.numberToChinese(invoiceDto.getFeeTotalSelf().toString()));
-
+        invoiceDto.setFeeTotal(feeSummaryByType.getFeeTotal());
+        invoiceDto.setTotalAmountChinese(Utils.numberToChinese(invoiceDto.getFeeTotal().toString()));
 
         //结算信息
         if (!patientSignIn.selfPay()) {
             invoiceDto.setCashAmount(settlementHY.getPsn_part_amt());
             invoiceDto.setFeeTotalSelf(settlementHY.getPsn_part_amt());
+            invoiceDto.setTotalFundAmount(settlementHY.getFund_pay_sumamt());
+
 //            invoiceDto.setFromBalanceThisYear(settlement.getDNZHZF());
 //            invoiceDto.setFromBalancePreviousYear(settlement.getLNZHZF());
 //            invoiceDto.setCivilSubsidy(settlement.getGWYBZZF());

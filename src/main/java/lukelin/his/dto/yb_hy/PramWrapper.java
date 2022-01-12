@@ -15,6 +15,16 @@ public class PramWrapper {
 
     private String areaCode = "";
 
+    private String downloadFileName;
+
+    public String getDownloadFileName() {
+        return downloadFileName;
+    }
+
+    public void setDownloadFileName(String downloadFileName) {
+        this.downloadFileName = downloadFileName;
+    }
+
     public String getAreaCode() {
         return areaCode;
     }

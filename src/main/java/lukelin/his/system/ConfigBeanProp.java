@@ -85,6 +85,26 @@ public class ConfigBeanProp {
 
     private String labTreatmentType;
 
+    private String medType;
+
+//    private String insuranceArea;
+//
+//    public String getInsuranceArea() {
+//        return insuranceArea;
+//    }
+//
+//    public void setInsuranceArea(String insuranceArea) {
+//        this.insuranceArea = insuranceArea;
+//    }
+
+    public String getMedType() {
+        return medType;
+    }
+
+    public void setMedType(String medType) {
+        this.medType = medType;
+    }
+
     public String getUseMethodNoseFeed() {
         return useMethodNoseFeed;
     }

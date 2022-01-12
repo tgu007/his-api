@@ -1,6 +1,7 @@
 package lukelin.his.dto.signin.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lukelin.his.domain.entity.basic.Dictionary;
 import lukelin.his.domain.enums.PatientSignIn.PatientSignInStatus;
 import lukelin.his.dto.basic.resp.setup.*;
 import lukelin.his.dto.basic.resp.ward.PatientSignInBedDto;
@@ -45,7 +46,7 @@ public class PatientSignInRespDto {
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     private Date signInDateTime;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    @JsonFormat(pattern = "yyyy-MM-dd", timezone = "GMT+8")
     private Date signOutDate;
 
     private PatientDto patient;
@@ -143,6 +144,26 @@ public class PatientSignInRespDto {
 
     public Integer getPendingPrescriptionCount() {
         return pendingPrescriptionCount;
+    }
+
+    private DictionaryDto medType;
+
+//    private DictionaryDto insuranceArea;
+//
+//    public DictionaryDto getInsuranceArea() {
+//        return insuranceArea;
+//    }
+//
+//    public void setInsuranceArea(DictionaryDto insuranceArea) {
+//        this.insuranceArea = insuranceArea;
+//    }
+
+    public DictionaryDto getMedType() {
+        return medType;
+    }
+
+    public void setMedType(DictionaryDto medType) {
+        this.medType = medType;
     }
 
     public void setPendingPrescriptionCount(Integer pendingPrescriptionCount) {

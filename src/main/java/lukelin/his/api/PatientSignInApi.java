@@ -30,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
 
+import javax.annotation.PostConstruct;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -147,17 +148,22 @@ public class PatientSignInApi extends BaseController {
         return decoratedResponse(DtoUtils.toDtoList(wardList));
     }
 
+
     private void initializeBedList() {
         Ward ward = Ebean.find(Ward.class).where().eq("name", "精神病区").findOne();
         for (WardRoom room : ward.getRoomList()) {
-            for (Integer i = 201; i <= 220; i++) {
-                WardRoomBed bed = new WardRoomBed();
-                bed.setOrder(i);
-                bed.setEnabled(true);
-                bed.setCode("00" + i);
-                bed.setName(i.toString() + "床");
-                room.getBedList().add(bed);
+            if(room.getName().equals("男病房"))
+            {
+                for (Integer i = 221; i <= 250; i++) {
+                    WardRoomBed bed = new WardRoomBed();
+                    bed.setOrder(i);
+                    bed.setEnabled(true);
+                    bed.setCode("00" + i);
+                    bed.setName(i.toString() + "床");
+                    room.getBedList().add(bed);
+                }
             }
+
         }
         Ebean.save(ward);
     }

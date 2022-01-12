@@ -149,7 +149,7 @@ public class PrescriptionService extends BaseHisService {
     public List<Prescription> getChangedPrescriptionList(PrescriptionFilterDto filterDto) {
         PrescriptionStatus[] changedStatusArray = new PrescriptionStatus[]{PrescriptionStatus.approved, PrescriptionStatus.disabled, PrescriptionStatus.canceled};
         filterDto.setPrescriptionStatusList(Arrays.asList(changedStatusArray));
-        PrescriptionType[] prescriptionTypeArray = new PrescriptionType[]{Medicine, PrescriptionType.Treatment, PrescriptionType.TextMedicine};
+        PrescriptionType[] prescriptionTypeArray = new PrescriptionType[]{Medicine, PrescriptionType.Treatment, PrescriptionType.TextMedicine, PrescriptionType.Text};
         filterDto.setPrescriptionTypeList(Arrays.asList(prescriptionTypeArray));
 
         Query query = this.buildPrescriptionListQuery(filterDto).query();
@@ -520,8 +520,9 @@ public class PrescriptionService extends BaseHisService {
     }
 
     @Transactional
-    public void clonePrescription(PrescriptionCloneReqDto prescriptionCloneReqDto) {
+    public List<Prescription> clonePrescription(PrescriptionCloneReqDto prescriptionCloneReqDto) {
         Map<UUID, PrescriptionGroup> groupMap = new HashMap<>();
+        List<Prescription> prescriptionList = new ArrayList<>();
         for (UUID prescriptionId : prescriptionCloneReqDto.getPrescriptionIdList()) {
             Prescription prescription = this.findById(Prescription.class, prescriptionId);
             for (UUID patientSignInId : prescriptionCloneReqDto.getToPatientIdList()) {
@@ -537,10 +538,12 @@ public class PrescriptionService extends BaseHisService {
                     }
                     clonedPrescription.setPrescriptionGroup(newGroup);
                 }
-
+                prescriptionList.add(clonedPrescription);
                 ebeanServer.save(clonedPrescription);
+                this.doPrescriptionUpdate(clonedPrescription, PrescriptionStatus.submitted, PrescriptionChangeAction.submit);
             }
         }
+        return prescriptionList;
     }
 
 
@@ -921,7 +924,10 @@ public class PrescriptionService extends BaseHisService {
 
     @Transactional
     public PreDefinedPrescription findOrCreatePredefinedPrescription(PreDefinedPrescriptionSaveDto preDefinedPrescriptionSaveDto) {
-        Optional<PreDefinedPrescription> optionalPreDefinedPrescription = this.basicService.findExistingEntity(ebeanServer.find(PreDefinedPrescription.class).where(), preDefinedPrescriptionSaveDto);
+        Optional<PreDefinedPrescription> optionalPreDefinedPrescription =
+                this.basicService.findExistingEntity(ebeanServer.find(PreDefinedPrescription.class).where()
+                        .eq("type", preDefinedPrescriptionSaveDto.getType())
+                        , preDefinedPrescriptionSaveDto);
         if (optionalPreDefinedPrescription.isPresent())
             return optionalPreDefinedPrescription.get();
         else {
@@ -996,6 +1002,8 @@ public class PrescriptionService extends BaseHisService {
         this.patientSignInService.validatePatientSignInStatus(patientSignIn.getUuid(), PatientSignInStatus.signedIn);
 
         for (PreDefinedPrescriptionTreatment preDefinedPrescriptionTreatment : preDefinedPrescription.getTreatmentList()) {
+            if(!preDefinedPrescriptionTreatment.getTreatment().isEnabled())
+                continue;
             Prescription prescription = preDefinedPrescriptionTreatment.toNewPrescription(patientSignIn);
             ebeanServer.save(prescription);
         }
@@ -1012,6 +1020,8 @@ public class PrescriptionService extends BaseHisService {
 
         List<UUID> idList = new ArrayList<>();
         for (PreDefinedPrescriptionMedicine preDefinedPrescriptionMedicine : preDefinedPrescription.getMedicineList()) {
+            if(!preDefinedPrescriptionMedicine.getMedicine().isEnabled())
+                continue;
             Prescription prescription = preDefinedPrescriptionMedicine.toNewPrescription(patientSignIn, totalNumber);
             ebeanServer.save(prescription);
             idList.add(prescription.getUuid());

@@ -387,6 +387,7 @@ public class BaseSettlementHY extends BaseEntity {
             dto.setSelfPayAmount(this.getPsn_part_amt().subtract(this.getOverlmt_selfpay()).subtract(this.getAct_pay_dedc()).subtract(this.getPreselfpay_amt()));
             dto.setTotalTC(dto.getSelfPayAmount().add(dto.getFund_pay_sumamt()));
         }
+        dto.setCreatedDate(this.getWhenCreated());
         return dto;
     }
 }

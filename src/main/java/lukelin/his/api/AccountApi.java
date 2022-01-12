@@ -65,13 +65,13 @@ public class AccountApi extends BaseController {
         return pagedResponse(paymentRespDtoList, list);
     }
 
-    @PostMapping("payment/list/all/{pageNum}")
-    public PagedDTO<PaymentRespDto> getAllPaymentList(@PathVariable int pageNum, @RequestBody PaymentListFilter filter) {
-        PagedList<Payment> list = accountService.getAllPaymentList(filter, pageNum);
-        List<PaymentRespDto> paymentRespDtoList = DtoUtils.toDtoList(list.getList());
+    @PostMapping("payment/list/all")
+    public DecoratedDTO<List<PaymentRespDto>> getAllPaymentList(@RequestBody PaymentListFilter filter) {
+        List<Payment> paymentList = accountService.getAllPaymentList(filter);
+        List<PaymentRespDto> paymentRespDtoList = DtoUtils.toDtoList(paymentList);
         Comparator<PaymentRespDto> comparator = Comparator.comparing(PaymentRespDto::getOriginPaymentDate).thenComparing(PaymentRespDto::getWhenCreated);
         paymentRespDtoList.sort(comparator);
-        return pagedResponse(paymentRespDtoList, list);
+        return decoratedResponse(paymentRespDtoList);
     }
 
     @PostMapping("payment/list/summary")

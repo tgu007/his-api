@@ -741,8 +741,8 @@ public class InventoryMedicineService extends BaseHisService {
 
             ebeanServer.save(returnOrderLine.getOriginOrderLine());
         }
-        if(pendingDisablePrescriptionList.size() >0)
-            this.notificationService.addPendingDisablePrescriptionNotification(pendingDisablePrescriptionList);
+//        if(pendingDisablePrescriptionList.size() >0)
+//            this.notificationService.addPendingDisablePrescriptionNotification(pendingDisablePrescriptionList);
         ebeanServer.save(order);
         return order;
     }

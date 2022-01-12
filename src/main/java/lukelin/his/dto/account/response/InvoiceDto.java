@@ -146,6 +146,16 @@ public class InvoiceDto {
 
     private String totalSignInDays;
 
+    private BigDecimal totalFundAmount;
+
+    public BigDecimal getTotalFundAmount() {
+        return totalFundAmount;
+    }
+
+    public void setTotalFundAmount(BigDecimal totalFundAmount) {
+        this.totalFundAmount = totalFundAmount;
+    }
+
     public int getSignInYear() {
         return signInYear;
     }

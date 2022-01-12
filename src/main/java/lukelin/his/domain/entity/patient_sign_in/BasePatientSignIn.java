@@ -132,6 +132,31 @@ public abstract class BasePatientSignIn extends BaseEntity {
     @JoinColumn(name = "from_hospital_id")
     private FromHospital fromHospital;
 
+    @ManyToOne
+    @JoinColumn(name = "med_type_id")
+    private Dictionary medType;
+
+//    @ManyToOne
+//    @JoinColumn(name = "insurance_area_id")
+//    private Dictionary insuranceArea;
+//
+//
+//    public Dictionary getInsuranceArea() {
+//        return insuranceArea;
+//    }
+//
+//    public void setInsuranceArea(Dictionary insuranceArea) {
+//        this.insuranceArea = insuranceArea;
+//    }
+
+    public Dictionary getMedType() {
+        return medType;
+    }
+
+    public void setMedType(Dictionary medType) {
+        this.medType = medType;
+    }
+
     public FromHospital getFromHospital() {
         return fromHospital;
     }
@@ -413,7 +438,7 @@ public abstract class BasePatientSignIn extends BaseEntity {
         dto.setInsuranceType(this.getInsuranceType().getCode());
         dto.setPatientName(this.getPatient().getName());
         dto.setSignInDate(this.getSignInDate());
-        if (this.getSingOutRequest() != null && this.getSingOutRequest().getStatus() == PatientSignOutStatus.signedOut)
+        if (this.getSingOutRequest() != null)
             dto.setSignOutDate(this.getSingOutRequest().getSignOutDate());
         dto.setSignInNumber(this.getSignInNumberCode());
         dto.setAge(Utils.getAge(this.getPatient().getBirthday()));
@@ -631,13 +656,11 @@ public abstract class BasePatientSignIn extends BaseEntity {
     }
 
     public Integer getPatientSignInDays() {
-        if (this.getSignInDate() == null)
+        if (this.getSignInDate() == null || this.getStatus() == PatientSignInStatus.canceled)
             return 0;
-        Date endDate = null;
-        if (this.getSingOutRequest() != null && this.getSingOutRequest().getStatus() == PatientSignOutStatus.signedOut)
+        Date endDate = new Date();
+        if (this.getSingOutRequest() != null)
             endDate = this.getSingOutRequest().getSignOutDate();
-        if (endDate == null)
-            endDate = new Date();
         return Utils.findDaysBetween(this.getSignInDate(), endDate);
     }
 }

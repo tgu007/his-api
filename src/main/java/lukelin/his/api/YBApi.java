@@ -1,5 +1,7 @@
 package lukelin.his.api;
 
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
 import io.ebean.PagedList;
 import lukelin.common.sdk.DecoratedDTO;
 import lukelin.common.sdk.PagedDTO;
@@ -9,8 +11,10 @@ import lukelin.common.springboot.exception.ApiValidationException;
 import lukelin.his.domain.entity.account.Fee;
 import lukelin.his.domain.entity.patient_sign_in.PatientSignIn;
 import lukelin.his.domain.entity.yb.*;
+import lukelin.his.domain.entity.yb.hy.PreSettlementHY;
 import lukelin.his.domain.entity.yb.hy.SettlementHY;
 import lukelin.his.dto.account.response.FeeListDto;
+import lukelin.his.dto.account.response.SettlementHYSummaryResp;
 import lukelin.his.dto.basic.SearchCodeDto;
 import lukelin.his.dto.signin.response.PatientSignInRespDto;
 import lukelin.his.dto.yb.*;
@@ -27,9 +31,10 @@ import lukelin.his.dto.yb_drg.DrgInitPramDto;
 import lukelin.his.dto.yb_drg.DrgMedicalRecordInfo;
 import lukelin.his.dto.yb_drg.DrgRecordRespDto;
 import lukelin.his.dto.yb_drg.DrgRecordSaveDto;
-import lukelin.his.dto.yb_hy.Req.SettlementValidationDetail;
-import lukelin.his.dto.yb_hy.Req.SettlementValidationOverall;
+import lukelin.his.dto.yb_hy.Req.*;
 import lukelin.his.dto.yb_hy.Resp.SettlementResp;
+import lukelin.his.dto.yb_hy.Resp.SettlementSummaryPrint;
+import lukelin.his.dto.yb_hy.Resp.SettlementValidationOverallResp;
 import lukelin.his.service.YBInventoryService;
 import lukelin.his.service.YBService;
 import lukelin.his.service.YBServiceHY;
@@ -42,8 +47,8 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-//@RequestMapping("api/yb")
-@RequestMapping("yb")
+@RequestMapping("api/yb")
+//@RequestMapping("yb")
 public class YBApi extends BaseController {
     @Autowired
     private YBService ybService;
@@ -113,7 +118,10 @@ public class YBApi extends BaseController {
 
     @PostMapping("medicine/match")
     public void matchAllMedicine() {
-        this.ybInventoryService.matchMedicine(null);
+        if (enableYBService)
+            this.ybInventoryService.matchMedicine(null);
+        else if (enableHYYBService)
+            this.ybServiceHy.matchAllMedicine();
     }
 
     @PostMapping("medicine/match/{medicineId}")
@@ -127,7 +135,10 @@ public class YBApi extends BaseController {
 
     @PostMapping("item/match")
     public void matchItem() {
-        this.ybInventoryService.matchItem(null);
+        if (enableYBService)
+            this.ybInventoryService.matchItem(null);
+        else if (enableHYYBService)
+            this.ybServiceHy.matchAllItems();
 
     }
 
@@ -143,12 +154,14 @@ public class YBApi extends BaseController {
 
     @PostMapping("treatment/match")
     public void matchTreatment() {
-        this.ybService.matchTreatment(null);
+        if (enableYBService)
+            this.ybService.matchTreatment(null);
+        else if (enableHYYBService)
+            this.ybServiceHy.matchAllTreatment();
     }
 
     @PostMapping("treatment/match/{treatmentId}")
     public void matchTreatment(@PathVariable UUID treatmentId) {
-
         if (enableYBService)
             this.ybService.matchTreatment(treatmentId);
         else if (enableHYYBService)
@@ -191,6 +204,12 @@ public class YBApi extends BaseController {
 
     }
 
+    @PostMapping("patient/sign_in/fee/upload/single/{feeId}")
+    public void uploadPatientSingleFee(@PathVariable UUID feeId) {
+        if (enableHYYBService)
+            this.ybServiceHy.uploadPatientPendingSingleFee(feeId);
+    }
+
 
     @PostMapping("patient/sign_in/fee/upload_result/save")
     public void saveFeeUploadResult(@RequestBody FeeUploadResultDto result) {
@@ -224,6 +243,7 @@ public class YBApi extends BaseController {
 //        else if(enableHYYBService)
 //            settlement = this.ybServiceHy.finalSettle(patientSignInId);
         SettlementResp settlementResp = this.ybServiceHy.finalSettle(patientSignInId);
+        this.ybServiceHy.uploadSettlement(patientSignInId);
         return decoratedResponse(settlementResp);
     }
 
@@ -321,6 +341,12 @@ public class YBApi extends BaseController {
 
     }
 
+    @PostMapping("patient/sign_in/signIn/{signInId}")
+    public void yBSignIn(@PathVariable UUID signInId) {
+        PatientSignIn patientSignIn = this.ybService.findById(PatientSignIn.class, signInId);
+        this.ybServiceHy.yBSignIn(patientSignIn);
+    }
+
     @PostMapping("patient/sign_in/self/signIn/{signInId}")
     public void selfYBSignIn(@PathVariable UUID signInId) {
         PatientSignIn patientSignIn = this.ybService.findById(PatientSignIn.class, signInId);
@@ -397,14 +423,97 @@ public class YBApi extends BaseController {
     }
 
     @PostMapping("settlement/validate/overall")
-    public void validateSettlementSummary(@RequestBody SettlementValidationOverall settlementValidationOverall) {
-        if (enableHYYBService)
-            this.ybServiceHy.validateSettlementSummary(settlementValidationOverall);
+    public DecoratedDTO<SettlementValidationOverallResp> validateSettlementSummary(@RequestBody SettlementValidationOverall settlementValidationOverall) {
+        //if (enableHYYBService)
+          return decoratedResponse(this.ybServiceHy.validateSettlementSummary(settlementValidationOverall));
     }
 
     @PostMapping("settlement/validate/detail")
     public void validateSettlementSummaryDetail(@RequestBody SettlementValidationDetail settlementValidationDetail) {
         if (enableHYYBService)
             this.ybServiceHy.validateSettlementSummaryDetail(settlementValidationDetail);
+    }
+
+    @PostMapping("file/download")
+    public Object downloadFile(@RequestBody FileDownloadPram fileDownloadPram) {
+        return this.ybServiceHy.downloadFile(fileDownloadPram);
+    }
+
+    @PostMapping("settlement/download/{signInCode}")
+    public JSONObject downloadSettlement(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadSettlement(signInCode);
+    }
+
+    @PostMapping("settlement/detail/download/{signInCode}")
+    public JSONArray downloadSettlementDetail(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadSettlementDetailInfo(signInCode);
+    }
+
+    @PostMapping("department/download")
+    public JSONArray downloadDepartment() {
+        return this.ybServiceHy.downloadDepartment();
+    }
+
+    @PostMapping("signin_info/download/{signInCode}")
+    public JSONArray downloadSigninInfo(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadSigninInfo(signInCode);
+    }
+
+    @PostMapping("diagnose/download/{signInCode}")
+    public JSONArray downloadDiagnose(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadDiagnose(signInCode);
+    }
+
+    @PostMapping("fee/download/{signInCode}")
+    public JSONArray downloadFee(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadFee(signInCode);
+    }
+
+    @PostMapping("accumulated/download/{signInCode}")
+    public JSONArray downloadAccumulatedInfo(@PathVariable Integer signInCode) {
+        return this.ybServiceHy.downloadAccumulatedInfo(signInCode);
+    }
+
+    @PostMapping("sign_in/by_time/download")
+    public JSONArray searchSignInByTime(@RequestBody SignInSearchByTime pram) {
+        return this.ybServiceHy.searchSignInByTime(pram);
+    }
+
+    @PostMapping("common/download/{info_number}/{pageNumber}")
+    public JSONArray searchCommon(@PathVariable String info_number, @PathVariable Integer pageNumber) {
+        return this.ybServiceHy.searchCommon(pageNumber, info_number);
+    }
+
+    @PostMapping("sign_out/{patientSignInId}")
+    public void ybSignOut(@PathVariable UUID patientSignInId) {
+        PatientSignIn patientSignIn = this.ybService.findById(PatientSignIn.class, patientSignInId);
+        this.ybServiceHy.signOut(patientSignIn);
+    }
+
+    @PostMapping("sign_out/cancel/{patientSignInId}")
+    public void cancelYBSignOut(@PathVariable UUID patientSignInId) {
+        PatientSignIn patientSignIn = this.ybService.findById(PatientSignIn.class, patientSignInId);
+        this.ybServiceHy.cancelYBSignOut(patientSignIn);
+    }
+
+    @PostMapping("settlement/cancel/{patientSignInId}")
+    public void cancelSettlement(@PathVariable UUID patientSignInId) {
+        this.ybServiceHy.cancelSettlement(patientSignInId);
+    }
+
+    @PostMapping("settlement/summary/print/{patientSignInId}")
+    public DecoratedDTO<SettlementSummaryPrint> getSettlementSummaryPrintInfo(@PathVariable UUID patientSignInId) {
+        return decoratedResponse(this.ybServiceHy.getSettlementSummaryPrintInfo(patientSignInId));
+    }
+
+    @PostMapping("pre_settlement/list/print")
+    public DecoratedDTO<List<PatientSignInRespDto>> getPrintSettlementList(@RequestBody List<UUID> patientSignInIdList) {
+        List<PatientSignIn> signInList = this.ybServiceHy.getPatientSignInList(patientSignInIdList);
+        return decoratedResponse(DtoUtils.toDtoList(signInList));
+    }
+
+    @PostMapping("patient/info/request")
+    public JSONObject getPatientInfo(@RequestBody PatientInfoReqPram infoReqPram) {
+        return this.ybServiceHy.getPatientInfo(infoReqPram);
     }
 }

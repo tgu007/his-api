@@ -31,6 +31,16 @@ public class FeeUploadReqHY {
 
     private String memo;
 
+    private String tcmdrug_used_way;
+
+    public String getTcmdrug_used_way() {
+        return tcmdrug_used_way;
+    }
+
+    public void setTcmdrug_used_way(String tcmdrug_used_way) {
+        this.tcmdrug_used_way = tcmdrug_used_way;
+    }
+
     public String getMemo() {
         return memo;
     }

@@ -1,5 +1,6 @@
 package lukelin.his.domain.entity.account;
 
+import com.alibaba.fastjson.JSONObject;
 import com.fasterxml.jackson.databind.util.BeanUtil;
 import io.ebean.Ebean;
 import lukelin.common.springboot.exception.ApiValidationException;
@@ -483,6 +484,7 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
         dto.setFeeStatus(this.getFeeStatus());
         dto.setFeeDate(this.getFeeDate());
         this.setBaseFeeListDtoValue(dto);
+        dto.setDisplayUnitAmount(this.getUnitAmount().setScale(2, RoundingMode.HALF_UP).toString());
 //        if (!this.getPatientSignIn().selfPay()) {
 //
 //        } else {
@@ -493,20 +495,35 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
 //        }
 
         if (this.getFeeUploadResult() != null) {
+            FeeUploadResult feeUploadResult = this.getFeeUploadResult();
+            String chargeLevelCode = JSONObject.parseObject(this.getFeeUploadResult().getReference()).getString("chrgitm_lv");
+
             dto.setUploadStatus(YBUploadStatus.uploaded);
-            dto.setSelfRatio(this.getFeeUploadResult().getSelfRatio().multiply(new BigDecimal("100")).toString() + "%");
-            dto.setInsuranceAmount(this.getFeeUploadResult().getInsuranceAmount());
-            dto.setSelfFeeAmount(this.getTotalAmount().subtract(dto.getInsuranceAmount()));
+            dto.setSelfRatio(feeUploadResult.getSelfRatio().multiply(new BigDecimal("100")).setScale(0, RoundingMode.HALF_UP).toString() + "%");
+            dto.setSelfZF(feeUploadResult.getSelfRatioPayAmount());
+            if (chargeLevelCode.equals("02"))
+                dto.setSelfZF(feeUploadResult.getSelfRatio().multiply(this.getTotalAmount()).setScale(2, RoundingMode.HALF_UP));
+            //dto.setSelfZL(feeUploadResult.getSelfRatioPayAmount());
+            dto.setInsuranceAmount(this.totalAmount.subtract(dto.getSelfZF()));
+
+
+            if (chargeLevelCode.equals("01"))
+                dto.setChargeLevel("甲");
+            else if (chargeLevelCode.equals("02"))
+                dto.setChargeLevel("乙");
+            else if (chargeLevelCode.equals("03"))
+                dto.setChargeLevel("丙");
         } else if (this.getFeeUploadError() != null) {
             dto.setUploadStatus(YBUploadStatus.error);
             dto.setUploadError(this.getFeeUploadError().getError());
         } else if (this.getSelfPay() != null && this.getSelfPay()) {
             dto.setUploadStatus(YBUploadStatus.selfPay);
             dto.setSelfRatio("100%");
-            dto.setSelfFeeAmount(this.getTotalAmount());
+            dto.setSelfZF(this.getTotalAmount());
             dto.setInsuranceAmount(BigDecimal.ZERO);
         } else
             dto.setUploadStatus(YBUploadStatus.notUploaded);
+
         if (this.getEntityType() == EntityType.treatment) {
             dto.setDuration(this.getTreatmentSnapshot().getTreatment().getDuration());
             dto.setAllowMultiExecution(this.getTreatmentSnapshot().getTreatment().getAllowMultiExecution());
@@ -632,7 +649,7 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
         uploadReqHY.setDet_item_fee_sumamt(this.getTotalAmount().toString());
         uploadReqHY.setCnt(this.getQuantity().toString());
         uploadReqHY.setPric(this.getUnitAmount().toString());
-        uploadReqHY.setMed_type("2101");
+        uploadReqHY.setMed_type(this.getPatientSignIn().getMedType().getExtraInfo());
         String emptyString = "default";
         uploadReqHY.setBilg_dept_name(this.getWardDepartment().getDepartment().getName());
         uploadReqHY.setBilg_dept_codg(this.getWardDepartment().getDepartment().getCode());
@@ -653,6 +670,27 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
             Medicine medicine = this.medicineSnapshot.getMedicine();
             uploadReqHY.setMed_list_codg(medicine.getCenterMedicine().getBZBM());
             uploadReqHY.setMedins_list_codg(medicine.getCode().toString());
+
+            if (medicine.chineseMedicine()) {
+                List<String> chineseMedicineCheckList = this.getChineseMedicineCheckList();
+                if (chineseMedicineCheckList.contains(medicine.getCenterMedicine().getBZBM())) //116种药需要检查单方还是复方
+                {
+                    uploadReqHY.setTcmdrug_used_way("2"); //单方
+
+                    Prescription prescription = this.getPrescription();
+                    if (prescription.getPrescriptionGroup() != null) {
+                        for (Prescription sameGroupPrescription : prescription.getPrescriptionGroup().getPrescriptionList()) {
+                            if (sameGroupPrescription.getPrescriptionType() == PrescriptionType.Medicine) {
+                                Medicine sameGroupMedicine = sameGroupPrescription.getPrescriptionChargeable().getPrescriptionMedicine().getMedicine();
+                                if (sameGroupMedicine.getCenterMedicine() != null && !chineseMedicineCheckList.contains(sameGroupMedicine.getCenterMedicine().getBZBM())) {
+                                    uploadReqHY.setTcmdrug_used_way("1"); //复方
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         } else if (this.getEntityType() == EntityType.item) {
             Item item = this.getItemSnapshot().getItem();
             uploadReqHY.setMed_list_codg(item.getCenterTreatment().getBZBM());
@@ -664,6 +702,127 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
         }
 
         return uploadReqHY;
+    }
+
+    private List<String> getChineseMedicineCheckList() {
+        List<String> checkList = new ArrayList<>();
+        checkList.add("T000100057");
+        checkList.add("T000100170");
+        checkList.add("T000100246");
+        checkList.add("T000100467");
+        checkList.add("T000100683");
+        checkList.add("T000200094");
+        checkList.add("T000200342");
+        checkList.add("T000200433");
+        checkList.add("T000200464");
+        checkList.add("T000200627");
+        checkList.add("T000200781");
+        checkList.add("T000200785");
+        checkList.add("T000200859");
+        checkList.add("T000200899");
+        checkList.add("T000300515");
+        checkList.add("T000300863");
+        checkList.add("T000400428");
+        checkList.add("T000400451");
+        checkList.add("T000400453");
+        checkList.add("T000400636");
+        checkList.add("T000400637");
+        checkList.add("T000400769");
+        checkList.add("T000400770");
+        checkList.add("T000500063");
+        checkList.add("T000500305");
+        checkList.add("T000500386");
+        checkList.add("T000500672");
+        checkList.add("T000600118");
+        checkList.add("T000600266");
+        checkList.add("T000600336");
+        checkList.add("T000600468");
+        checkList.add("T000600852");
+        checkList.add("T000700014");
+        checkList.add("T000700035");
+        checkList.add("T000700087");
+        checkList.add("T000700200");
+        checkList.add("T000700278");
+        checkList.add("T000700337");
+        checkList.add("T000700362");
+        checkList.add("T000700382");
+        checkList.add("T000700481");
+        checkList.add("T000700788");
+        checkList.add("T000800112");
+        checkList.add("T000800113");
+        checkList.add("T000800179");
+        checkList.add("T000800255");
+        checkList.add("T000800381");
+        checkList.add("T000800466");
+        checkList.add("T000800547");
+        checkList.add("T000800728");
+        checkList.add("T000800779");
+        checkList.add("T000900421");
+        checkList.add("T000900480");
+        checkList.add("T000900536");
+        checkList.add("T001000244");
+        checkList.add("T001100003");
+        checkList.add("T001100659");
+        checkList.add("T001200858");
+        checkList.add("T001300011");
+        checkList.add("T001300075");
+        checkList.add("T001300123");
+        checkList.add("T001300477");
+        checkList.add("T001300521");
+        checkList.add("T001300602");
+        checkList.add("T001400387");
+        checkList.add("T001400494");
+        checkList.add("T001400501");
+        checkList.add("T001400876");
+        checkList.add("T001500639");
+        checkList.add("T001500736");
+        checkList.add("T001500800");
+        checkList.add("T001700012");
+        checkList.add("T001700053");
+        checkList.add("T001700085");
+        checkList.add("T001700173");
+        checkList.add("T001700186");
+        checkList.add("T001700234");
+        checkList.add("T001700280");
+        checkList.add("T001700288");
+        checkList.add("T001700294");
+        checkList.add("T001700310");
+        checkList.add("T001700314");
+        checkList.add("T001700316");
+        checkList.add("T001700338");
+        checkList.add("T001700341");
+        checkList.add("T001700351");
+        checkList.add("T001700353");
+        checkList.add("T001700354");
+        checkList.add("T001700368");
+        checkList.add("T001700439");
+        checkList.add("T001700441");
+        checkList.add("T001700443");
+        checkList.add("T001700510");
+        checkList.add("T001700517");
+        checkList.add("T001700518");
+        checkList.add("T001700554");
+        checkList.add("T001700643");
+        checkList.add("T001700645");
+        checkList.add("T001700647");
+        checkList.add("T001700654");
+        checkList.add("T001700660");
+        checkList.add("T001700667");
+        checkList.add("T001700668");
+        checkList.add("T001700768");
+        checkList.add("T001700850");
+        checkList.add("T001700869");
+        checkList.add("T001700886");
+        checkList.add("T001700894");
+        checkList.add("T001700896");
+        checkList.add("T001800493");
+        checkList.add("T001800569");
+        checkList.add("T001800622");
+        checkList.add("T001800646");
+        checkList.add("T001800764");
+        checkList.add("T001800765");
+        checkList.add("T001800847");
+        return checkList;
     }
 
     public FeeUploadLineReq toUploadDto() {
@@ -853,6 +1012,17 @@ public class Fee extends BaseFee implements FeeInterface, SnapshotSignInInfoInte
         }
 
         return newOrder;
+    }
+
+    public boolean entityMatched() {
+        if (this.getEntityType() == EntityType.medicine && this.getMedicineSnapshot().getMedicine().getMatchedMedicine() != null)
+            return true;
+        else if (this.getEntityType() == EntityType.item && this.getItemSnapshot().getItem().getMatchedItem() != null)
+            return true;
+        else if (this.getEntityType() == EntityType.treatment && this.getTreatmentSnapshot().getTreatment().getMatchedTreatment() != null)
+            return true;
+        else
+            return false;
     }
 
 

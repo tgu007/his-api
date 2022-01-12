@@ -1,8 +1,10 @@
 package lukelin.his.dto.prescription.request.filter;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lukelin.his.domain.enums.PatientSignIn.PatientSignInStatus;
 import lukelin.his.dto.basic.SearchCodeDto;
 
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,6 +19,28 @@ public class PatientSignInFilterDto extends SearchCodeDto {
 
     public Boolean getCheck3024() {
         return check3024;
+    }
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date startDate;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date endDate;
+
+    public Date getStartDate() {
+        return startDate;
+    }
+
+    public void setStartDate(Date startDate) {
+        this.startDate = startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public void setEndDate(Date endDate) {
+        this.endDate = endDate;
     }
 
     public void setCheck3024(Boolean check3024) {

@@ -63,30 +63,30 @@ public class NotificationService extends BaseService {
                 .findList();
         this.initReturnMedicineOrderSubmitted(submittedReturnOrderList);
 
-        List<PrescriptionStatus> statusList = new ArrayList<>();
-        statusList.add(PrescriptionStatus.approved);
-        statusList.add(PrescriptionStatus.created);
-        statusList.add(PrescriptionStatus.submitted);
-        statusList.add(PrescriptionStatus.pendingDisable);
-        List<PatientSignIn> currentSignInList = ebeanServer.find(PatientSignIn.class).where().eq("status", PatientSignInStatus.signedIn).findList();
-        List<Prescription> allPrescriptionList = currentSignInList.stream().map(PatientSignIn::getPrescriptionList).flatMap(Collection::stream).filter(pre -> statusList.contains(pre.getStatus())).collect(Collectors.toList());
-        rejectedPrescriptionList = allPrescriptionList.stream()
-                .filter(p -> p.getStatus() == PrescriptionStatus.created
-                        && p.getChangeLogList().stream().anyMatch(c -> c.getAction() == PrescriptionChangeAction.reject))
-                .collect(Collectors.toList());
-        pendingPrescriptionList = allPrescriptionList.stream()
-                .filter(p -> p.getStatus() == PrescriptionStatus.submitted)
-                .collect(Collectors.toList());
-        pendingDisablePrescriptionList = allPrescriptionList.stream()
-                .filter(p -> p.getStatus() == PrescriptionStatus.pendingDisable)
-                .collect(Collectors.toList());
-        this.addPendingDisablePrescriptionNotification(pendingDisablePrescriptionList);
-        this.addPendingPrescriptionNotification(pendingPrescriptionList);
-        this.addRejectPrescriptionNotification(rejectedPrescriptionList);
-        List<Prescription> approvedPrescriptionList = allPrescriptionList.stream()
-                .filter(p -> p.getStatus() == PrescriptionStatus.approved)
-                .collect(Collectors.toList());
-        this.approvedPrescriptionChanged(approvedPrescriptionList);
+//        List<PrescriptionStatus> statusList = new ArrayList<>();
+//        statusList.add(PrescriptionStatus.approved);
+//        statusList.add(PrescriptionStatus.created);
+//        statusList.add(PrescriptionStatus.submitted);
+//        statusList.add(PrescriptionStatus.pendingDisable);
+//        List<PatientSignIn> currentSignInList = ebeanServer.find(PatientSignIn.class).where().eq("status", PatientSignInStatus.signedIn).findList();
+//        List<Prescription> allPrescriptionList = currentSignInList.stream().map(PatientSignIn::getPrescriptionList).flatMap(Collection::stream).filter(pre -> statusList.contains(pre.getStatus())).collect(Collectors.toList());
+//        rejectedPrescriptionList = allPrescriptionList.stream()
+//                .filter(p -> p.getStatus() == PrescriptionStatus.created
+//                        && p.getChangeLogList().stream().anyMatch(c -> c.getAction() == PrescriptionChangeAction.reject))
+//                .collect(Collectors.toList());
+//        pendingPrescriptionList = allPrescriptionList.stream()
+//                .filter(p -> p.getStatus() == PrescriptionStatus.submitted)
+//                .collect(Collectors.toList());
+//        pendingDisablePrescriptionList = allPrescriptionList.stream()
+//                .filter(p -> p.getStatus() == PrescriptionStatus.pendingDisable)
+//                .collect(Collectors.toList());
+//        this.addPendingDisablePrescriptionNotification(pendingDisablePrescriptionList);
+//        this.addPendingPrescriptionNotification(pendingPrescriptionList);
+//        this.addRejectPrescriptionNotification(rejectedPrescriptionList);
+//        List<Prescription> approvedPrescriptionList = allPrescriptionList.stream()
+//                .filter(p -> p.getStatus() == PrescriptionStatus.approved)
+//                .collect(Collectors.toList());
+//        this.approvedPrescriptionChanged(approvedPrescriptionList);
 
         List<PatientSignIn> pendingSignInList =
                 ebeanServer.find(PatientSignIn.class).where()

@@ -4,6 +4,8 @@ import java.math.BigDecimal;
 import java.util.Date;
 
 public class SettlementValidationOverall {
+    private Integer insutypeId;
+
     private String insutype;
 
     private String clr_type;
@@ -36,6 +38,14 @@ public class SettlementValidationOverall {
 
     public void setInsutype(String insutype) {
         this.insutype = insutype;
+    }
+
+    public Integer getInsutypeId() {
+        return insutypeId;
+    }
+
+    public void setInsutypeId(Integer insutypeId) {
+        this.insutypeId = insutypeId;
     }
 
     public String getClr_type() {

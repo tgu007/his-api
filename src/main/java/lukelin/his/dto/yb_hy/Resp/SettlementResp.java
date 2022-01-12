@@ -1,5 +1,6 @@
 package lukelin.his.dto.yb_hy.Resp;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lukelin.common.util.BeanUtils;
 import lukelin.his.domain.entity.yb.hy.PreSettlementHY;
 import lukelin.his.domain.entity.yb.hy.SettlementHY;
@@ -79,6 +80,17 @@ public class SettlementResp {
     private BigDecimal selfPayRatio;
 
     private BigDecimal totalTC;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm", timezone = "GMT+8")
+    private Date createdDate;
+
+    public Date getCreatedDate() {
+        return createdDate;
+    }
+
+    public void setCreatedDate(Date createdDate) {
+        this.createdDate = createdDate;
+    }
 
     public BigDecimal getSelfPayAmount() {
         return selfPayAmount;

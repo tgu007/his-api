@@ -29,7 +29,6 @@ public class FeeListDto extends BaseFeeListDto {
 
     private String selfRatio;
 
-    private BigDecimal selfFeeAmount;
 
     private BigDecimal insuranceAmount;
 
@@ -52,6 +51,37 @@ public class FeeListDto extends BaseFeeListDto {
     private Boolean selfPay;
 
     private Boolean missingSupervisor;
+
+    private String chargeLevel;
+
+
+    private BigDecimal selfZL;
+
+    private BigDecimal selfZF;
+
+    public BigDecimal getSelfZL() {
+        return selfZL;
+    }
+
+    public void setSelfZL(BigDecimal selfZL) {
+        this.selfZL = selfZL;
+    }
+
+    public BigDecimal getSelfZF() {
+        return selfZF;
+    }
+
+    public void setSelfZF(BigDecimal selfZF) {
+        this.selfZF = selfZF;
+    }
+
+    public String getChargeLevel() {
+        return chargeLevel;
+    }
+
+    public void setChargeLevel(String chargeLevel) {
+        this.chargeLevel = chargeLevel;
+    }
 
     public Boolean getMissingSupervisor() {
         return missingSupervisor;
@@ -141,13 +171,7 @@ public class FeeListDto extends BaseFeeListDto {
         this.selfRatio = selfRatio;
     }
 
-    public BigDecimal getSelfFeeAmount() {
-        return selfFeeAmount;
-    }
 
-    public void setSelfFeeAmount(BigDecimal selfFeeAmount) {
-        this.selfFeeAmount = selfFeeAmount;
-    }
 
     public BigDecimal getInsuranceAmount() {
         return insuranceAmount;

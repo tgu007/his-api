@@ -15,6 +15,7 @@ import lukelin.his.domain.entity.basic.codeEntity.Diagnose;
 import lukelin.his.domain.entity.basic.template.MedicalRecordTemplate;
 import lukelin.his.domain.entity.basic.template.MedicalRecordType;
 import lukelin.his.domain.entity.basic.ward.Ward;
+import lukelin.his.domain.entity.basic.ward.WardRoom;
 import lukelin.his.domain.entity.basic.ward.WardRoomBed;
 import lukelin.his.domain.entity.inventory.medicine.PrescriptionMedicineOrderLine;
 import lukelin.his.domain.entity.inventory.medicine.PrescriptionMedicineReturnOrderLine;
@@ -22,6 +23,7 @@ import lukelin.his.domain.entity.patient_sign_in.*;
 import lukelin.his.domain.entity.prescription.Prescription;
 import lukelin.his.domain.enums.Basic.DepartmentTreatmentType;
 import lukelin.his.domain.enums.Basic.UserRoleType;
+import lukelin.his.domain.enums.Fee.FeeStatus;
 import lukelin.his.domain.enums.Inventory.PrescriptionMedicineOrderLineStatus;
 import lukelin.his.domain.enums.Inventory.PrescriptionMedicineReturnOrderLineStatus;
 import lukelin.his.domain.enums.PatientSignIn.PatientSignInStatus;
@@ -144,6 +146,8 @@ public class PatientSignInService extends BaseService {
         pramsDto.setEmployeeList(DtoUtils.toDtoList(this.userService.getEmployeeList(employeeFilter)));
         pramsDto.setDrgGroupList(DtoUtils.toDtoList(this.getDrgGroupList(true)));
         pramsDto.setFromHospitalList(DtoUtils.toDtoList(basicService.getFromHospitalList()));
+        pramsDto.setMedTypeList(DtoUtils.toDtoList(this.basicService.getDictionaryList(configBeanProp.getMedType())));
+        //pramsDto.setInsuranceAreaList(DtoUtils.toDtoList(this.basicService.getDictionaryList(configBeanProp.getInsuranceArea())));
         return pramsDto;
     }
 
@@ -173,13 +177,17 @@ public class PatientSignInService extends BaseService {
         patientSignInDto.copyValue(patientSignIn);
 
         this.userService.validateDoctorAgreement(patientSignIn.getDoctor());
-        if (patientSignIn.getStatus() == PatientSignInStatus.signedOut || patientSignIn.getStatus() == PatientSignInStatus.pendingSignOut)
+        //if (patientSignIn.getStatus() == PatientSignInStatus.signedOut || patientSignIn.getStatus() == PatientSignInStatus.pendingSignOut)
+        if (patientSignIn.getStatus() == PatientSignInStatus.signedOut)
             throw new ApiValidationException("非法的转住院状态");
         //如果为新记录，COPY数据库生成入院号
+        List<PatientSignInStatus> invalidStatusList = new ArrayList<>();
+        invalidStatusList.add(PatientSignInStatus.signedOut);
+        invalidStatusList.add(PatientSignInStatus.canceled);
         if (patientSignInDto.getUuid() == null) {
             Optional<PatientSignIn> existingSignIn = ebeanServer.find(PatientSignIn.class).where()
                     .eq("patient.uuid", patientSignInDto.getPatientId())
-                    .ne("status", PatientSignInStatus.signedOut)
+                    .notIn("status", invalidStatusList)
                     .findOneOrEmpty();
             if (existingSignIn.isPresent())
                 throw new ApiValidationException("此病人已经入院");
@@ -206,8 +214,8 @@ public class PatientSignInService extends BaseService {
                     this.ybService.updateSignInInfo(patientSignIn);
                 else if (this.enableHYYBService)
                     this.ybServiceHY.updateSignInInfo(patientSignIn);
-            }
-
+            } else if (!patientSignIn.selfPay() && this.enableHYYBService)
+                this.ybServiceHY.yBSignIn(patientSignIn);
         }
 
         //this.ybService.savePatientSignIn(patientSignIn, patientSignInDto);
@@ -250,6 +258,10 @@ public class PatientSignInService extends BaseService {
             el = el.gt("pendingFeeCount", 0);
         }
 
+        if (patientSignInFilter.getStartDate() != null && patientSignInFilter.getEndDate() != null) {
+            el = el.between("signInDate", patientSignInFilter.getStartDate(), patientSignInFilter.getEndDate());
+        }
+
         return findPagedList(el, pageNum);
     }
 
@@ -259,7 +271,7 @@ public class PatientSignInService extends BaseService {
         if (patientSignIn.getStatus() != PatientSignInStatus.pendingSignIn)
             throw new ApiValidationException("not.valid.sign.in.status");
         patientSignIn.setStatus(PatientSignInStatus.signedIn);
-        patientSignIn.setSignInDate(new Date());
+        //patientSignIn.setSignInDate(new Date());
         ebeanServer.update(patientSignIn);
 
         //判断是否为医保
@@ -277,16 +289,26 @@ public class PatientSignInService extends BaseService {
         return patientSignIn;
     }
 
+    @Transactional
     public PatientSignIn cancelSignIn(UUID signInId) {
         PatientSignIn patientSignIn = this.findById(PatientSignIn.class, signInId);
         //Todo 需改变下面的检查逻辑为是否有费用产生
-        if (patientSignIn.getStatus() != PatientSignInStatus.pendingSignIn)
-            throw new ApiValidationException("not.valid.sign.in.status");
-        patientSignIn.setStatus(PatientSignInStatus.signedOut);
+        this.checkWithPharmacy(patientSignIn);
+        if (patientSignIn.getFeeList().stream().anyMatch(f -> f.getFeeStatus() == FeeStatus.confirmed))
+            throw new ApiValidationException("已经产生费用，无法取消");
+
+        this.signOutCurrentBed(signInId);
+
+        patientSignIn.setStatus(PatientSignInStatus.canceled);
         if (patientSignIn.getSignInDate() == null)
             patientSignIn.setSignInDate(new Date());
         //patientSignIn.setSignOutDate(new Date());
         ebeanServer.update(patientSignIn);
+
+        if (this.enableHYYBService && !patientSignIn.selfPay()) {
+            if (patientSignIn.getYbSignIn() != null)
+                this.ybServiceHY.cancelYBSignIn(patientSignIn);
+        }
         return patientSignIn;
     }
 
@@ -375,7 +397,7 @@ public class PatientSignInService extends BaseService {
         if (wardFilter.getWardIdList() != null)
             el = el.in("uuid", wardFilter.getWardIdList());
 
-        if (wardFilter.getHideEmptyBed())
+        if (wardFilter.getHideEmptyBed() && wardFilter.getSearchCode() == null)
             el = el.ne("roomList.bedList.currentSignIn.uuid", null)
                     .filterMany("roomList.bedList.currentSignIn")
                     .ne("uuid", null)
@@ -386,6 +408,16 @@ public class PatientSignInService extends BaseService {
                     .filterMany("roomList")
                     .ne("bedList.currentSignIn.uuid", null);
         //.eq("bedList.currentSignIn.status", PatientSignInStatus.signedIn);
+
+        if (wardFilter.getSearchCode() != null)
+            el = el.contains("roomList.bedList.currentSignIn.patient.name", wardFilter.getSearchCode())
+                    .filterMany("roomList.bedList.currentSignIn")
+                    .contains("patient.name", wardFilter.getSearchCode())
+                    .filterMany("roomList.bedList")
+                    .contains("currentSignIn.patient.name", wardFilter.getSearchCode())
+                    //.eq("currentSignIn.status", PatientSignInStatus.signedIn)
+                    .filterMany("roomList")
+                    .contains("bedList.currentSignIn.patient.name", wardFilter.getSearchCode());
         return el.findList();
     }
 
@@ -476,7 +508,7 @@ public class PatientSignInService extends BaseService {
     @Transactional
     public PatientSignOutRequest saveNewPatientSignOutRequest(PatientSignOutRequestSaveDto patientSignOutRequestSaveDto) {
         PatientSignIn patientSignIn = this.findById(PatientSignIn.class, patientSignOutRequestSaveDto.getPatientSignInId());
-        this.validatePatientSignInStatus(patientSignIn, PatientSignInStatus.signedIn);
+        //this.validatePatientSignInStatus(patientSignIn, PatientSignInStatus.signedIn);
 
 
         Date existingSignOutDate = null;
@@ -489,12 +521,12 @@ public class PatientSignInService extends BaseService {
         if (existingSignOutDate != null && existingSignOutDate.compareTo(request.getSignOutDate()) != 0)
             updatePrescription = true;
 
-        List<PatientSignOutStatus> validStatusList = new ArrayList<>();
-        validStatusList.add(PatientSignOutStatus.created);
-        validStatusList.add(PatientSignOutStatus.validation);
-        validStatusList.add(PatientSignOutStatus.validationCompleted);
-        if (!validStatusList.contains(request.getStatus()))
-            throw new ApiValidationException("当前出院状态不允许删除");
+//        List<PatientSignOutStatus> validStatusList = new ArrayList<>();
+//        validStatusList.add(PatientSignOutStatus.created);
+//        validStatusList.add(PatientSignOutStatus.validation);
+//        validStatusList.add(PatientSignOutStatus.validationCompleted);
+//        if (!validStatusList.contains(request.getStatus()))
+//            throw new ApiValidationException("当前出院状态不允许删除");
 
         if (patientSignIn.getSingOutRequest() != null && request.getUuid() == null)
             throw new ApiValidationException("已经有出院信息存在");
@@ -534,7 +566,7 @@ public class PatientSignInService extends BaseService {
         this.signOutCurrentBed(patientSignIn.getUuid());
 
         //更新出院医嘱的内容
-        signOutRequest.setSignOutDate(new Date());
+        //signOutRequest.setSignOutDate(new Date());
         this.updateSignOutPrescription(signOutRequest);
 
         ebeanServer.save(signOutRequest);
@@ -543,7 +575,7 @@ public class PatientSignInService extends BaseService {
 
         if (this.enableYBService)
             this.ybService.signOut(patientSignIn);
-        if (this.enableHYYBService)
+        if (this.enableHYYBService && !patientSignIn.selfPay())
             this.ybServiceHY.signOut(patientSignIn);
         this.notificationService.patientSignOutRequest(patientSignIn);
         return signOutRequest;
@@ -616,18 +648,17 @@ public class PatientSignInService extends BaseService {
                 throw new ApiValidationException("存在关于费用的未上传的耗材或药品库存信息，请尝试重新上传医保费用。");
         }
 
-//        if (this.enableHYYBService) {
-//            if (this.ybService.anyPendingUploadFee(patientSignIn.getUuid()))
-//                throw new ApiValidationException("signIn.error.signOutRequest.notUploadedFee");
-//        }
 
         if (!patientSignIn.selfPay()) {
+            if (this.ybService.anyPendingUploadFee(patientSignIn.getUuid()))
+                throw new ApiValidationException("signIn.error.signOutRequest.notUploadedFee");
+
             if (patientSignIn.getPreSettlementHY() == null)
                 throw new ApiValidationException("signIn.error.signOutRequest.noPreSettlement");
 
-            ViewFeeSummary patientFeeInfo = Ebean.find(ViewFeeSummary.class).where().eq("patientSignInId", patientSignIn.getUuid()).findOne();
-            if (patientSignIn.getPreSettlementHY().getMedfee_sumamt().compareTo(patientFeeInfo.getTotalAmount()) != 0)
-                throw new ApiValidationException("医保预结算费用与系统记录不符合，请尝试重新预结");
+//            ViewFeeSummary patientFeeInfo = Ebean.find(ViewFeeSummary.class).where().eq("patientSignInId", patientSignIn.getUuid()).findOne();
+//            if (patientSignIn.getPreSettlementHY().getMedfee_sumamt().compareTo(patientFeeInfo.getTotalAmount()) != 0)
+//                throw new ApiValidationException("医保预结算费用与系统记录不符合，请尝试重新预结");
 
 //            //有没有费用未从中心下载
 //            if (!this.ybService.allFeeDownloadedFromYB(patientSignIn.getUuid()))
@@ -637,6 +668,10 @@ public class PatientSignInService extends BaseService {
 //                throw new ApiValidationException("中心费用明细核对出错，请打开医保对账功能，并检查有问题的明细费用");
         }
 
+        this.checkWithPharmacy(patientSignIn);
+    }
+
+    private void checkWithPharmacy(PatientSignIn patientSignIn) {
         //查找是否有未处理的领药单
         int pendingMedicineOrderLine = ebeanServer.find(PrescriptionMedicineOrderLine.class).where()
                 .or()
@@ -723,7 +758,7 @@ public class PatientSignInService extends BaseService {
         this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.created, PrescriptionStatus.submitted, PrescriptionChangeAction.submit, reqDto);
         List<Prescription> prescriptionList = new ArrayList<>();
         prescriptionList.add(prescription);
-        this.notificationService.prescriptionSubmitted(prescriptionList);
+        //this.notificationService.prescriptionSubmitted(prescriptionList);
         return prescription;
 
     }
@@ -759,8 +794,8 @@ public class PatientSignInService extends BaseService {
             this.prescriptionService.doPrescriptionUpdate(prescription, prescriptionToStatus, PrescriptionChangeAction.signOut);
         }
 
-        if (pendingDisablePrescriptionList.size() > 0)
-            this.notificationService.addPendingDisablePrescriptionNotification(prescriptionList);
+//        if (pendingDisablePrescriptionList.size() > 0)
+//            this.notificationService.addPendingDisablePrescriptionNotification(prescriptionList);
     }
 
     @Transactional
@@ -1045,6 +1080,7 @@ public class PatientSignInService extends BaseService {
         diagnoseSet.addAll(oldPatientSignIn.getDiagnoseSet());
         newSignIn.setDiagnoseSet(diagnoseSet);
         newSignIn.setDrgGroup(oldPatientSignIn.getDrgGroup());
+        newSignIn.setMedType(oldPatientSignIn.getMedType());
         ebeanServer.save(newSignIn);
         newSignIn = this.findById(PatientSignIn.class, newSignIn.getUuid());
         newSignIn.setSignInNumberCode(Utils.buildDisplayCode(newSignIn.getSignInNumber()));

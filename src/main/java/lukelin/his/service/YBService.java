@@ -101,7 +101,6 @@ public class YBService extends BaseHisService {
 
     @Bean
     public RestTemplate restTemplate() {
-
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         factory.setConnectTimeout(5000);
         factory.setReadTimeout(5000);

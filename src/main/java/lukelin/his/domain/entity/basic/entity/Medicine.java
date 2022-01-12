@@ -325,5 +325,4 @@ public class Medicine extends BaseMedicine implements DtoConvertible<MedicineRes
         return false;
     }
 
-
 }

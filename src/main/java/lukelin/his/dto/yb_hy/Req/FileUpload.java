@@ -1,17 +1,17 @@
 package lukelin.his.dto.yb_hy.Req;
 
 public class FileUpload {
-    private  byte[] in;
+    private  String in;
 
     private String filename;
 
     private String fixmedins_code;
 
-    public byte[] getIn() {
+    public String getIn() {
         return in;
     }
 
-    public void setIn(byte[] in) {
+    public void setIn(String in) {
         this.in = in;
     }
 

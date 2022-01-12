@@ -6,7 +6,8 @@ public enum PatientSignInStatus {
     pendingSignIn("待入院"),
     signedIn("已入院"),
     pendingSignOut("待出院"),
-    signedOut("已出院");
+    signedOut("已出院"),
+    canceled("已取消");
 
     private String description;
 

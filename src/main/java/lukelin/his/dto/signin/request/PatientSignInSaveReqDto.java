@@ -1,5 +1,6 @@
 package lukelin.his.dto.signin.request;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.ebean.Ebean;
 import lukelin.common.util.BeanUtils;
 import lukelin.his.domain.entity.basic.Dictionary;
@@ -44,6 +45,37 @@ public class PatientSignInSaveReqDto {
     private UUID drgGroupId;
 
     private UUID fromHospitalId;
+
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
+    private Date signInDate;
+
+    private Integer medTypeId;
+
+    private Integer insuranceAreaId;
+
+    public Integer getInsuranceAreaId() {
+        return insuranceAreaId;
+    }
+
+    public void setInsuranceAreaId(Integer insuranceAreaId) {
+        this.insuranceAreaId = insuranceAreaId;
+    }
+
+    public Integer getMedTypeId() {
+        return medTypeId;
+    }
+
+    public void setMedTypeId(Integer medTypeId) {
+        this.medTypeId = medTypeId;
+    }
+
+    public Date getSignInDate() {
+        return signInDate;
+    }
+
+    public void setSignInDate(Date signInDate) {
+        this.signInDate = signInDate;
+    }
 
     public UUID getFromHospitalId() {
         return fromHospitalId;
@@ -176,6 +208,8 @@ public class PatientSignInSaveReqDto {
         patientSignIn.setDepartmentTreatment(Ebean.find(DepartmentTreatment.class, this.getDepartmentId()));
         patientSignIn.setDoctor(Ebean.find(Employee.class, this.getDoctorId()));
         patientSignIn.setInsuranceType(Ebean.find(Dictionary.class, this.getInsuranceTypeId()));
+        patientSignIn.setMedType(Ebean.find(Dictionary.class, this.getMedTypeId()));
+       // patientSignIn.setInsuranceArea(Ebean.find(Dictionary.class, this.getInsuranceAreaId()));
         Set<Diagnose> diagnoseSet = new HashSet<>();
         for (UUID diagnoseUuid : this.getDiseaseIdList()) {
             diagnoseSet.add(Ebean.find(Diagnose.class, diagnoseUuid));
@@ -184,7 +218,7 @@ public class PatientSignInSaveReqDto {
         if (this.drgGroupId != null)
             patientSignIn.setDrgGroup(Ebean.find(DrgGroup.class, this.getDrgGroupId()));
 
-        if(this.fromHospitalId != null)
+        if (this.fromHospitalId != null)
             patientSignIn.setFromHospital(Ebean.find(FromHospital.class, this.getFromHospitalId()));
     }
 

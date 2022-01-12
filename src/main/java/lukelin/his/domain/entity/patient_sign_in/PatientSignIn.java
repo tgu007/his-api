@@ -86,6 +86,7 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
     @OneToMany(mappedBy = "patientSignIn", cascade = CascadeType.ALL)
     private List<MedicalRecord> medicalRecordList;
 
+
     public PreSettlementHY getPreSettlementHY() {
         return preSettlementHY;
     }
@@ -194,6 +195,8 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
         respDto.setSignInMethod(this.getSignInMethod().toDto());
         respDto.setPatientCondition(this.getPatientCondition().toDto());
         respDto.setAge(Utils.getAge(this.getPatient().getBirthday()));
+        respDto.setMedType(this.getMedType().toDto());
+//        respDto.setInsuranceArea(this.getInsuranceArea().toDto());
         Optional<ViewPaymentSummary> optionalPaymentInfo = Ebean.find(ViewPaymentSummary.class).where().eq("patientSignInId", this.getUuid()).findOneOrEmpty();
         optionalPaymentInfo.ifPresent(viewPaymentSummary -> respDto.setTotalPaidAmount(viewPaymentSummary.getTotalPayment()));
 
@@ -211,6 +214,11 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
                     respDto.setSelfPayFeeAmount(this.getPreSettlement().getXJJE());
                     respDto.setDeductAmountFromCard(this.preSettlement.getDNZHZF().add(this.preSettlement.getLNZHZF()));
                     respDto.setLastSettlementDate(this.preSettlement.getWhenCreated());
+                } else if (this.getPreSettlementHY() != null) {
+                    respDto.setCoveredFeeAmount(this.getPreSettlementHY().getFund_pay_sumamt());
+                    respDto.setSelfPayFeeAmount(this.getPreSettlementHY().getPsn_part_amt());
+                    //respDto.setDeductAmountFromCard(this.getSettlementHY().getDNZHZF().add(this.preSettlement.getLNZHZF()));
+                    respDto.setLastSettlementDate(this.getPreSettlementHY().getWhenCreated());
                 }
             }
         }
@@ -320,7 +328,11 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
         if (this.getFromHospital() != null)
             respDto.setFromHospital(this.getFromHospital().toDto());
 
-        Integer pendingPrescriptionCount = (int) this.getPrescriptionList().stream().filter(p -> p.getStatus() == PrescriptionStatus.submitted).count();
+        Integer pendingPrescriptionCount = (int) this.getPrescriptionList().stream()
+                .filter(p -> p.getStatus() == PrescriptionStatus.submitted
+                        ||
+                        p.getStatus() == PrescriptionStatus.pendingDisable
+                ).count();
         respDto.setPendingPrescriptionCount(pendingPrescriptionCount);
         return respDto;
 
@@ -389,7 +401,7 @@ public class PatientSignIn extends BasePatientSignIn implements DtoConvertible<P
         signInReq.setMdtrt_cert_type("02");
         signInReq.setCert_type("2");
         signInReq.setCertno(this.getPatient().getIdNumber());
-        signInReq.setMed_type("2101"); //普通住院
+        signInReq.setMed_type(this.getMedType().getExtraInfo()); //普通住院
         signInReq.setIpt_no(this.getSignInNumberCode());
         signInReq.setAtddr_no(this.getDoctor().getDoctorAgreementNumber().getAgreementNumber());
         signInReq.setChfpdr_name(this.getDoctor().getName());

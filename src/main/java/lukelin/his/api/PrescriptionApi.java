@@ -132,31 +132,31 @@ public class PrescriptionApi extends BaseController {
     @PostMapping("action/submit")
     public void submitPrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.created, PrescriptionStatus.submitted, PrescriptionChangeAction.submit, reqDto);
-        this.notificationService.prescriptionSubmitted(prescriptionList);
+        //this.notificationService.prescriptionSubmitted(prescriptionList);
     }
 
     @PostMapping("action/approve")
     public void approvePrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.submitted, PrescriptionStatus.approved, PrescriptionChangeAction.approve, reqDto);
-        this.notificationService.approvedPrescriptionChanged(prescriptionList);
+        //this.notificationService.approvedPrescriptionChanged(prescriptionList);
     }
 
     @PostMapping("action/reject")
     public void rejectPrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.submitted, PrescriptionStatus.created, PrescriptionChangeAction.reject, reqDto);
-        this.notificationService.prescriptionRejected(prescriptionList);
+       // this.notificationService.prescriptionRejected(prescriptionList);
     }
 
     @PostMapping("action/disable")
     public void disablePrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.approved, PrescriptionStatus.pendingDisable, PrescriptionChangeAction.disable, reqDto);
-        this.notificationService.prescriptionPendingDisable(prescriptionList);
+        //this.notificationService.prescriptionPendingDisable(prescriptionList);
     }
 
     @PostMapping("action/disable_confirm")
     public void confirmDisablePrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.pendingDisable, PrescriptionStatus.disabled, PrescriptionChangeAction.confirmDisable, reqDto);
-        this.notificationService.prescriptionConfirmDisable(prescriptionList);
+        //this.notificationService.prescriptionConfirmDisable(prescriptionList);
     }
 
 
@@ -168,14 +168,14 @@ public class PrescriptionApi extends BaseController {
     @PostMapping("action/cancel")
     public void cancelPrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.checkPendingCancelPrescriptionFee(reqDto);
-        this.notificationService.approvedPrescriptionChanged(prescriptionList);
+        //this.notificationService.approvedPrescriptionChanged(prescriptionList);
         //this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.approved, PrescriptionStatus.canceled, PrescriptionChangeAction.cancel, reqDto);
     }
 
     @PostMapping("action/delete")
     public void deletePrescription(@RequestBody PrescriptionChangeStatusReqDto reqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.updatePrescriptionStatus(PrescriptionStatus.created, PrescriptionStatus.deleted, PrescriptionChangeAction.delete, reqDto);
-        this.notificationService.prescriptionDeleted(prescriptionList);
+        //this.notificationService.prescriptionDeleted(prescriptionList);
     }
 
     @PostMapping("group")
@@ -185,7 +185,8 @@ public class PrescriptionApi extends BaseController {
 
     @PostMapping("clone")
     public void clonePrescription(@RequestBody PrescriptionCloneReqDto prescriptionCloneReqDto) {
-        prescriptionService.clonePrescription(prescriptionCloneReqDto);
+        List<Prescription> prescriptionList = prescriptionService.clonePrescription(prescriptionCloneReqDto);
+        //this.notificationService.prescriptionSubmitted(prescriptionList);
     }
 
 
@@ -207,7 +208,7 @@ public class PrescriptionApi extends BaseController {
     @PostMapping("execution/list/execute")
     public void executePrescriptionList(@RequestBody PrescriptionExecutionListReqDto executionListReqDto) {
         List<Prescription> prescriptionList = this.prescriptionService.executePrescriptionList(executionListReqDto);
-        this.notificationService.prescriptionExecuted(prescriptionList);
+        //this.notificationService.prescriptionExecuted(prescriptionList);
     }
 
     @PostMapping("medicine/order/pending/list")
@@ -220,7 +221,7 @@ public class PrescriptionApi extends BaseController {
     @PostMapping("medicine/order/submit")
     public void submitMedicineOrder(@RequestBody PrescriptionMedicineOrderCreateDto prescriptionMedicineOrderCreateDto) {
         PrescriptionMedicineOrder order = this.prescriptionService.createPrescriptionMedicineOrder(prescriptionMedicineOrderCreateDto);
-        this.notificationService.medicineOrderSubmitted(order);
+        //this.notificationService.medicineOrderSubmitted(order);
     }
 
     @PostMapping("nursing/card/oral")

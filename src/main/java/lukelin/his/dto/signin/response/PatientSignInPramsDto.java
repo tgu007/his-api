@@ -32,9 +32,30 @@ public class PatientSignInPramsDto {
 
     private List<FromHospitalRespDto> fromHospitalList;
 
+    private List<DictionaryDto> medTypeList;
+
+//    private List<DictionaryDto> insuranceAreaList;
+//
+//    public List<DictionaryDto> getInsuranceAreaList() {
+//        return insuranceAreaList;
+//    }
+//
+//    public void setInsuranceAreaList(List<DictionaryDto> insuranceAreaList) {
+//        this.insuranceAreaList = insuranceAreaList;
+//    }
+
+    public List<DictionaryDto> getMedTypeList() {
+        return medTypeList;
+    }
+
+    public void setMedTypeList(List<DictionaryDto> medTypeList) {
+        this.medTypeList = medTypeList;
+    }
+
     public List<FromHospitalRespDto> getFromHospitalList() {
         return fromHospitalList;
     }
+
 
     public void setFromHospitalList(List<FromHospitalRespDto> fromHospitalList) {
         this.fromHospitalList = fromHospitalList;
